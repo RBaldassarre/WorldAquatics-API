@@ -1,285 +1,348 @@
 """
-Integration of open‑water results from the World Aquatics API with
-personal best times from the SwimRankings library.
+OW 10km -> PB pool (400/800/1500 LCM) via SwimRankings
 
-This script fetches the results for the 10 km open‑water event of a
-specified competition and matches each athlete with their personal
-best times over 400 m, 800 m and 1500 m freestyle (long‑course
-pool, i.e. 50 m).  The personal bests are retrieved using the
-``swimrankings`` Python library, which wraps the swimrankings.net
-website.  Results are saved to an Excel file for further analysis.
+- Fetch OW event list for a competition (FINA endpoint)
+- Auto-pick 10km events (Men/Women) OR let user choose
+- Fetch event results
+- For each athlete, (optional) fetch PBs from swimrankings (LCM) for:
+  400 Free, 800 Free, 1500 Free
+- Save to Excel
 
-Note
-====
-The ``swimrankings`` library is not available in this environment,
-and swimrankings.net may block automated access.  Run this script
-in an environment where ``swimrankings`` is installed and network
-access to swimrankings.net is allowed.  When importing the library
-fails, personal bests will not be populated but the script will
-still fetch open‑water results.
-
-Usage
------
-```
-python ow_swimrankings_integration.py --competition_id 4725
-```
-
-Replace ``4725`` with the ID of the open‑water competition you
-wish to analyse.  The script produces an Excel file named
-``open_water_pool_analysis.xlsx`` in the current working directory.
+Python: 3.10+
 """
 
 from __future__ import annotations
 
-import argparse
+import os
+import time
 import logging
-from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any
+import unicodedata
+import re
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 import pandas as pd
 
-competition_id = "3328"
+# =======================
+# SETTINGS (EDIT HERE)
+# =======================
+COMPETITION_ID = "4725"              # e.g. 4725 = Singapore 2025
+AUTO_PICK_10KM = True               # True = auto pick "10km"; False = prompt choose
+GENDER_FILTER = ""                  # "M" / "W" / "" (all)
+OUTPUT_XLSX = "ow_pool_pb.xlsx"     # output file name (saved next to this .py)
+SLEEP_BETWEEN_ATHLETES = 0.2        # be nice to swimrankings
+DEBUG_PRINT_OW_EVENTS = False       # True to print all OW events found
+# =======================
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
+lg = logging.getLogger("ow-pb")
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0",
+    "Accept": "application/json",
+    "Origin": "https://www.worldaquatics.com",
+    "Referer": "https://www.worldaquatics.com",
+}
+
+FINA_BASE = "https://api.worldaquatics.com/fina"
 
 try:
-    # Import the swimrankings library if available.  This import will
-    # fail in restricted environments; in that case, personal bests
-    # will not be fetched.
     from swimrankings import Athletes
     SWIMRANKINGS_AVAILABLE = True
 except Exception:
     SWIMRANKINGS_AVAILABLE = False
 
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
-logger = logging.getLogger(__name__)
+# -----------------------
+# Helpers
+# -----------------------
+def http_get_json(url: str, retries: int = 3, pause: float = 0.8) -> Any:
+    """GET JSON with headers + small retry."""
+    last_err = None
+    for _ in range(retries):
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=30)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            last_err = e
+            time.sleep(pause)
+    raise RuntimeError(f"GET failed: {url} -> {last_err}")
 
 
-WORLD_AQUATICS_BASE = "https://api.worldaquatics.com"
-
-
-@dataclass
-class AthleteResult:
-    """Data structure to hold combined open‑water result and personal bests."""
-    name: str
-    nationality: str
-    open_water_time: str
-    personal_bests: Dict[str, Dict[str, Optional[str]]] = field(default_factory=dict)
-
-
-def fetch_competition_events(competition_id: int) -> List[Dict[str, Any]]:
+def norm_name(s: str) -> str:
     """
-    Retrieve all events for a given competition from the World Aquatics API.
-
-    Parameters
-    ----------
-    competition_id : int
-        Identifier of the competition (e.g., 4725 for the 2025 World
-        Aquatics Championships).
-
-    Returns
-    -------
-    List[Dict[str, Any]]
-        A list of event metadata dictionaries.
+    Normalize names for SwimRankings search:
+    - remove accents
+    - keep letters/spaces/hyphen/apostrophe
+    - collapse spaces
     """
-    url = f"{WORLD_AQUATICS_BASE}/competitions/{competition_id}/events"
-    try:
-        response = requests.get(url, timeout=30)
-        response.raise_for_status()
-        events = response.json()
-        return events if isinstance(events, list) else []
-    except Exception as e:
-        logger.error("Failed to fetch competition events: %s", e)
+    if not s:
+        return ""
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    s = re.sub(r"[^A-Za-z\s\-']", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+
+def split_last_first(full_name: str) -> Tuple[str, str]:
+    """Return (last_name, first_name) from 'Last, First' or 'Last First'."""
+    full_name = full_name.strip()
+    if ", " in full_name:
+        last_name, first_name = full_name.split(", ", 1)
+        return last_name.strip(), first_name.strip()
+
+    parts = full_name.split()
+    if not parts:
+        return "", ""
+    if len(parts) == 1:
+        return parts[0], ""
+    return parts[0], " ".join(parts[1:])
+
+
+# -----------------------
+# World Aquatics (OW)
+# -----------------------
+def fetch_ow_events(competition_id: str) -> List[Dict[str, Any]]:
+    """Return OW DisciplineList items: {name, gender, id}."""
+    url = f"{FINA_BASE}/competitions/{competition_id}/events"
+    data = http_get_json(url)
+
+    lg.info("Competition name: %s", data.get("Name"))
+
+    ow_events: List[Dict[str, Any]] = []
+    for sport in data.get("Sports", []):
+        if sport.get("Code") != "OW":
+            continue
+        for d in sport.get("DisciplineList", []):
+            ow_events.append({
+                "name": d.get("DisciplineName", ""),
+                "gender": d.get("Gender", ""),
+                "id": d.get("Id", ""),
+            })
+    return ow_events
+
+
+def pick_events(ow_events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Pick events automatically (10km) or prompt user."""
+    if not ow_events:
         return []
 
+    filtered = [
+        e for e in ow_events
+        if (not GENDER_FILTER or (e.get("gender") or "").upper() == GENDER_FILTER.upper())
+    ]
 
-def fetch_event_results(event_id: int) -> List[Dict[str, Any]]:
+    if DEBUG_PRINT_OW_EVENTS:
+        for i, e in enumerate(filtered, 1):
+            lg.info("OW #%d: %s (%s) -> %s", i, e["name"], e["gender"], e["id"])
+
+    if AUTO_PICK_10KM:
+        picked: List[Dict[str, Any]] = []
+        for e in filtered:
+            nm = (e.get("name") or "").lower()
+            if "10" in nm and "km" in nm:
+                picked.append(e)
+        return picked if picked else filtered
+
+    print("\n📡 Open Water events:")
+    for i, e in enumerate(filtered, start=1):
+        print(f"{i}. {e['name']} ({e['gender']}) -> {e['id']}")
+    idx = int(input("\n👉 Enter event number: ")) - 1
+    if idx < 0 or idx >= len(filtered):
+        raise ValueError("Invalid selection")
+    return [filtered[idx]]
+
+
+def fetch_event_results(event_id: str) -> List[Dict[str, Any]]:
     """
-    Retrieve results for a specific event from the World Aquatics API.
-
-    Parameters
-    ----------
-    event_id : int
-        Identifier of the event (within a competition).
-
-    Returns
-    -------
-    List[Dict[str, Any]]
-        A list of result dictionaries containing athlete name, nationality and
-        performance time.  The exact keys may vary depending on the API.
+    Return list of athletes:
+    {wa_id, full_name, nat, time, rank}
     """
-    url = f"{WORLD_AQUATICS_BASE}/eventResults/{event_id}"
-    try:
-        response = requests.get(url, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-        # Some events return results under 'Results', others directly as list
-        if isinstance(data, dict) and 'Results' in data:
-            return data['Results']
-        elif isinstance(data, list):
-            return data
-        else:
-            return []
-    except Exception as e:
-        logger.error("Failed to fetch event results: %s", e)
+    url = f"{FINA_BASE}/events/{event_id}"
+    data = http_get_json(url)
+
+    heats = data.get("Heats", [])
+    if not heats:
         return []
 
+    results = heats[0].get("Results", [])
+    out: List[Dict[str, Any]] = []
 
-def get_swimrankings_personal_bests(name: str, country: str | None = None) -> Dict[str, Dict[str, Optional[str]]]:
+    for a in results:
+        wa_id = (
+            a.get("PersonId")
+            or a.get("AthleteId")
+            or a.get("CompetitorId")
+            or a.get("Id")
+            or ""
+        )
+
+        fn = (a.get("FirstName") or "").strip()
+        ln = (a.get("LastName") or "").strip()
+        full_name = f"{ln}, {fn}".strip(", ").strip()
+
+        out.append({
+            "wa_id": wa_id,
+            "full_name": full_name,
+            "nat": a.get("NAT", ""),
+            "time": a.get("Time", ""),
+            "rank": a.get("Rank", ""),
+        })
+
+    return out
+
+
+# -----------------------
+# SwimRankings (PB)
+# -----------------------
+_PB_CACHE: Dict[Tuple[str, str], Dict[str, Dict[str, Optional[str]]]] = {}
+
+
+def swimrankings_pbs(full_name: str, nat: str) -> Dict[str, Dict[str, Optional[str]]]:
     """
-    Retrieve personal bests from swimrankings.net for 400, 800 and 1500 m
-    freestyle (long course) for a given athlete.
-
-    Parameters
-    ----------
-    name : str
-        Full name of the athlete in "Last, First" format.
-    country : str or None
-        Optional country code to narrow down the search.
-
-    Returns
-    -------
-    Dict[str, Dict[str, Optional[str]]]
-        Mapping from event ("400 Free", "800 Free", "1500 Free") to a
-        dictionary containing time, date, meet and location.  Missing
-        information is represented by None.  If the swimrankings
-        library is unavailable or no matches are found, an empty
-        dictionary is returned.
+    Return PBs for LCM: 400/800/1500 Free.
+    - NEVER crash on AthleteNotFoundError
+    - Normalize names
+    - Try with NAT filter; if no match, retry without NAT
     """
-    target_events = {"400 Free", "800 Free", "1500 Free"}
-    results: Dict[str, Dict[str, Optional[str]]] = {}
+    target = {"400 Free", "800 Free", "1500 Free"}
+    pbs: Dict[str, Dict[str, Optional[str]]] = {}
 
     if not SWIMRANKINGS_AVAILABLE:
-        logger.warning("swimrankings library not available; personal bests cannot be fetched")
-        return results
+        return pbs
 
-    # Extract last and first names for search.  The library expects
-    # separate names when filtering by country.
-    if ", " in name:
-        last_name, first_name = name.split(", ", 1)
-    else:
-        parts = name.split()
-        last_name = parts[0] if parts else name
-        first_name = "".join(parts[1:]) if len(parts) > 1 else ""
+    cache_key = (full_name, nat)
+    if cache_key in _PB_CACHE:
+        return _PB_CACHE[cache_key]
 
-    # Search for athletes by last name; filter by country if provided.
-    athletes = Athletes(name=last_name)
-    matches = []
-    for athlete in athletes:
-        if country and athlete.country != country:
-            continue
-        # Compare first names loosely (case insensitive)
-        if first_name and athlete.first_name.lower() != first_name.lower():
-            continue
-        matches.append(athlete)
+    last_name_raw, first_name_raw = split_last_first(full_name)
+    last_name = norm_name(last_name_raw).upper()
+    first_name = norm_name(first_name_raw)
 
-    if not matches:
-        logger.warning("No matching athlete found in swimrankings for %s", name)
-        return results
+    if not last_name:
+        _PB_CACHE[cache_key] = pbs
+        return pbs
 
-    # Assume the first match is the correct athlete.
-    athlete = matches[0]
-    try:
-        details = athlete.get_details()
-    except Exception as e:
-        logger.error("Failed to fetch details for %s: %s", athlete.full_name, e)
-        return results
+    def _search(country_filter: Optional[str]) -> Dict[str, Dict[str, Optional[str]]]:
+        try:
+            athletes = Athletes(name=last_name)
+        except Exception as e:
+            lg.warning("SwimRankings: no athletes for last_name='%s' (%s)", last_name, e)
+            return {}
 
-    for pb in details.personal_bests:
-        if pb.event in target_events and pb.course == "LCM":
-            results[pb.event] = {
-                "time": pb.time,
-                "date": pb.date,
-                "meet": pb.meet,
-                "location": pb.location,
-            }
-    return results
+        matches = []
+        for ath in athletes:
+            try:
+                ath_country = getattr(ath, "country", "")
+                ath_first = getattr(ath, "first_name", "")
+            except Exception:
+                continue
 
+            if country_filter and ath_country != country_filter:
+                continue
 
-def analyse_open_water_pool(competition_id: int) -> pd.DataFrame:
-    """
-    Perform the full analysis: fetch open‑water 10 km results and match them
-    with personal bests in pool events.
+            if first_name and ath_first.lower() != first_name.lower():
+                continue
 
-    Parameters
-    ----------
-    competition_id : int
-        ID of the competition containing the open‑water 10 km event.
+            matches.append(ath)
 
-    Returns
-    -------
-    pd.DataFrame
-        A DataFrame containing athlete names, nationalities, open‑water
-        times and personal bests for 400, 800 and 1500 m freestyle.
-    """
-    # Fetch all events in the competition
-    events = fetch_competition_events(competition_id)
-    logger.info("Fetched %d events for competition %d", len(events), competition_id)
+        if not matches:
+            return {}
 
-    # Identify the 10 km open‑water event.  Event names often contain
-    # "10km" or similar; adapt this filter if necessary.
-    ow_event_id = None
-    for evt in events:
-        name = evt.get("Name", "").lower()
-        discipline = evt.get("Discipline", "").lower()
-        if "10" in name and "open water" in discipline:
-            ow_event_id = evt.get("Id")
-            break
-    if ow_event_id is None:
-        logger.error("Could not find the 10 km open‑water event in competition %d", competition_id)
-        return pd.DataFrame()
+        ath = matches[0]
+        try:
+            details = ath.get_details()
+        except Exception as e:
+            lg.warning("SwimRankings: failed get_details for '%s' (%s)", getattr(ath, "full_name", full_name), e)
+            return {}
 
-    # Fetch results for the open‑water event
-    results = fetch_event_results(ow_event_id)
-    logger.info("Fetched %d open‑water results", len(results))
+        out_pbs: Dict[str, Dict[str, Optional[str]]] = {}
+        try:
+            for pb in details.personal_bests:
+                if pb.event in target and pb.course == "LCM":
+                    out_pbs[pb.event] = {
+                        "time": pb.time,
+                        "date": pb.date,
+                        "meet": pb.meet,
+                        "location": pb.location,
+                    }
+        except Exception as e:
+            lg.warning("SwimRankings: PB parse error for '%s' (%s)", full_name, e)
+            return {}
 
-    # Build a list of AthleteResult objects
-    athlete_results: List[AthleteResult] = []
-    for res in results:
-        name = res.get("AthleteName") or res.get("Name")
-        nationality = res.get("Nation") or res.get("CountryCode") or res.get("NAT")
-        time = res.get("Result") or res.get("Time") or res.get("Rank" )
-        if not name or not time:
-            continue
-        pb = get_swimrankings_personal_bests(name, country=nationality)
-        athlete_results.append(AthleteResult(name=name, nationality=nationality, open_water_time=time, personal_bests=pb))
+        return out_pbs
 
-    # Construct DataFrame
-    rows = []
-    for ar in athlete_results:
-        # Ensure keys for events exist
-        for event in ["400 Free", "800 Free", "1500 Free"]:
-            pb_info = ar.personal_bests.get(event, {})
-            rows.append({
-                "Athlete": ar.name,
-                "Nation": ar.nationality,
-                "OpenWaterTime": ar.open_water_time,
-                "PoolEvent": event,
-                "PB_Time": pb_info.get("time"),
-                "PB_Date": pb_info.get("date"),
-                "PB_Meet": pb_info.get("meet"),
-                "PB_Location": pb_info.get("location"),
-            })
-    df = pd.DataFrame(rows)
-    return df
+    pbs = _search(nat)
+    if not pbs:
+        pbs = _search(None)
+
+    _PB_CACHE[cache_key] = pbs
+    return pbs
 
 
+# -----------------------
+# Main
+# -----------------------
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Analyse open‑water and pool performance")
-    parser.add_argument("--competition_id", type=int, required=True, help="Competition ID for the 10 km open‑water event")
-    parser.add_argument("--output", type=str, default="open_water_pool_analysis.xlsx", help="Output Excel file")
-    args = parser.parse_args()
+    lg.info("Competition: %s", COMPETITION_ID)
 
-    df = analyse_open_water_pool(args.competition_id)
-    if df.empty:
-        logger.error("No data to save")
+    ow_events = fetch_ow_events(COMPETITION_ID)
+    lg.info("OW events found: %d", len(ow_events))
+
+    if not ow_events:
+        lg.error("No OW events returned. Check COMPETITION_ID or API availability.")
         return
-    df.to_excel(args.output, index=False)
-    logger.info("Analysis complete. Results saved to %s", args.output)
+
+    selected = pick_events(ow_events)
+    lg.info("Selected events: %s", [e["name"] for e in selected])
+
+    rows: List[Dict[str, Any]] = []
+
+    for ev in selected:
+        ev_name = ev["name"]
+        ev_id = ev["id"]
+
+        lg.info("Downloading results: %s (%s)", ev_name, ev_id)
+        athletes = fetch_event_results(ev_id)
+        lg.info("Athletes: %d", len(athletes))
+
+        for a in athletes:
+            wa_id = a.get("wa_id", "")
+            full_name = a["full_name"]
+            nat = a["nat"]
+            ow_time = a["time"]
+            rank = a["rank"]
+
+            pbs = swimrankings_pbs(full_name, nat)
+            time.sleep(SLEEP_BETWEEN_ATHLETES)
+
+            for pool_event in ["400 Free", "800 Free", "1500 Free"]:
+                pb = pbs.get(pool_event, {})
+                rows.append({
+                    "OW_Event": ev_name,
+                    "WA_ID": wa_id,
+                    "Athlete": full_name,
+                    "NAT": nat,
+                    "OW_Rank": rank,
+                    "OW_Time": ow_time,
+                    "PoolEvent": pool_event,
+                    "PB_Time": pb.get("time"),
+                    "PB_Date": pb.get("date"),
+                    "PB_Meet": pb.get("meet"),
+                    "PB_Location": pb.get("location"),
+                })
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        lg.error("No data to save.")
+        return
+
+    out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), OUTPUT_XLSX)
+    df.to_excel(out_path, index=False)
+    lg.info("Saved: %s", out_path)
 
 
 if __name__ == "__main__":
-    df = analyse_open_water_pool(int(competition_id))
-    if not df.empty:
-        df.to_excel("open_water_pool_analysis.xlsx", index=False)
-        logger.info("File salvato")
+    main()
