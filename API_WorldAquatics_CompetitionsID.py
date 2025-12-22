@@ -5,8 +5,9 @@ import requests
 import pandas as pd
 
 # === Multiple years ===
-years = [2024, 2025] # [2024] or [2024, 2025]
-all_comps = []
+years = [2022, 2023, 2024, 2025] # [2024] or [2024, 2025]
+disciplines_Filter= ["OW"]  # SW, OW, DV, WT, HY - ALL []
+all_comps = [] 
 
 # === Settings ===
 base_dir = os.path.dirname(os.path.abspath(__file__)) #Path File
@@ -54,23 +55,35 @@ for year in years:
 # === Create DataFrame
 rows = []
 for c in all_comps:
+    location = c.get("location") or {}
+
     row = {
-        "id": c["id"],
-        "name": c["name"],
-        "city": c["location"]["city"],
-        "country": c["location"]["countryName"],
+        "id": c.get("id"),
+        "name": c.get("name"),
+        "city": location.get("city"),
+        "country": location.get("countryName"),
         "disciplines": ", ".join(c.get("disciplines", [])),
-        "date_from": c["dateFrom"][:10],
-        "date_to": c["dateTo"][:10]
+        "date_from": (c.get("dateFrom") or "")[:10],
+        "date_to": (c.get("dateTo") or "")[:10]
     }
     rows.append(row)
 
 # === Save as Excel file
 df = pd.DataFrame(rows)
+# Apply disciplines filter
+if disciplines_Filter:
+    pattern = "|".join(disciplines_Filter)
+    df = df[df["disciplines"].str.contains(pattern, na=False)]
+
 year_str = "_".join(map(str, years))
 excel_path = os.path.join(output_dir, f"competitions_{year_str}.xlsx")
 df.to_excel(excel_path, index=False)
 
 # === Print final preview
 print(f"\n✅ Excel file saved: {excel_path}")
+
+pd.set_option("display.max_columns", None)
+pd.set_option("display.width", 200)  # aumenta larghezza console
+print(df.head(10))
+
 print(df.head())
