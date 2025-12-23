@@ -1,0 +1,51 @@
+[
+  {
+    "event": "800 Free",
+    "time": "8:22.64",
+    "seconds": 502.64,
+    "date": "2022-03-27",
+    "meet": "Swiss National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:00.74",
+    "seconds": 240.74,
+    "date": "2022-03-24",
+    "meet": "Swiss National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:55.33",
+    "seconds": 955.33,
+    "date": "2022-03-23",
+    "meet": "Swiss National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:04.32",
+    "seconds": 244.32,
+    "date": "2021-04-10",
+    "meet": "Swiss National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:22.91",
+    "seconds": 502.91,
+    "date": "2021-04-09",
+    "meet": "Swiss National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:53.77",
+    "seconds": 953.77,
+    "date": "2021-04-07",
+    "meet": "Swiss National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:37.64",
+    "seconds": 997.64,
+    "date": "2019-05-30",
+    "meet": "German Junior National Championships (50m) 2019"
+  }
+]

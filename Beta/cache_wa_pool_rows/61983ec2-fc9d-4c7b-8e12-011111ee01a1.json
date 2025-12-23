@@ -1,0 +1,72 @@
+[
+  {
+    "event": "1500 Free",
+    "time": "16:07.69",
+    "seconds": 967.69,
+    "date": "2025-08-14",
+    "meet": "2025 JPAG Asunción (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:31.72",
+    "seconds": 511.72,
+    "date": "2025-08-12",
+    "meet": "2025 JPAG Asunción (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:16.48",
+    "seconds": 256.48,
+    "date": "2023-12-17",
+    "meet": "Campeonato Clasificatorio y Nacional por Categorias (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:48.55",
+    "seconds": 1008.55,
+    "date": "2023-12-15",
+    "meet": "Campeonato Clasificatorio y Nacional por Categorias (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:37.72",
+    "seconds": 517.72,
+    "date": "2023-12-14",
+    "meet": "Campeonato Clasificatorio y Nacional por Categorias (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:36.08",
+    "seconds": 996.08,
+    "date": "2021-12-12",
+    "meet": "Peruvian National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:14.45",
+    "seconds": 254.45,
+    "date": "2021-12-10",
+    "meet": "Peruvian National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:42.52",
+    "seconds": 1002.52,
+    "date": "2019-12-20",
+    "meet": "Peruvian National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:19.46",
+    "seconds": 259.46,
+    "date": "2019-12-19",
+    "meet": "Peruvian National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:44.55",
+    "seconds": 524.55,
+    "date": "2019-12-18",
+    "meet": "Peruvian National Championships (50m)"
+  }
+]

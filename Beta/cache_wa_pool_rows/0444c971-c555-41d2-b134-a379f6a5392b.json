@@ -1,0 +1,44 @@
+[
+  {
+    "event": "1500 Free",
+    "time": "16:09.99",
+    "seconds": 969.99,
+    "date": "2023-04-21",
+    "meet": "Russian National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:36.85",
+    "seconds": 516.85,
+    "date": "2023-04-18",
+    "meet": "Russian National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:11.05",
+    "seconds": 251.05,
+    "date": "2023-04-17",
+    "meet": "Russian National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:49.99",
+    "seconds": 1009.99,
+    "date": "2020-11-29",
+    "meet": "Kazakhstan National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:41.55",
+    "seconds": 521.55,
+    "date": "2020-11-28",
+    "meet": "Kazakhstan National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:09.66",
+    "seconds": 249.66,
+    "date": "2020-11-27",
+    "meet": "Kazakhstan National Championships (50m)"
+  }
+]

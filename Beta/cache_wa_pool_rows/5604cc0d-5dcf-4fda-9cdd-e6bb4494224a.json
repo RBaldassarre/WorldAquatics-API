@@ -1,0 +1,37 @@
+[
+  {
+    "event": "1500 Free",
+    "time": "17:37.55",
+    "seconds": 1057.55,
+    "date": "2022-04-24",
+    "meet": "Belgian National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:34.32",
+    "seconds": 274.32,
+    "date": "2022-04-23",
+    "meet": "Belgian National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "9:23.35",
+    "seconds": 563.35,
+    "date": "2022-04-22",
+    "meet": "Belgian National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:37.51",
+    "seconds": 277.51,
+    "date": "2021-06-12",
+    "meet": "Greek National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "17:50.95",
+    "seconds": 1070.95,
+    "date": "2021-06-11",
+    "meet": "Greek National Championships (50m)"
+  }
+]

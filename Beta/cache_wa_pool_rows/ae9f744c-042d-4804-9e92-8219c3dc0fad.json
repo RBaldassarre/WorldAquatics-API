@@ -1,0 +1,149 @@
+[
+  {
+    "event": "800 Free",
+    "time": "DNS",
+    "seconds": null,
+    "date": "2022-04-24",
+    "meet": "Belgian National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "3:59.95",
+    "seconds": 239.95,
+    "date": "2022-04-23",
+    "meet": "Belgian National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:57.19",
+    "seconds": 957.19,
+    "date": "2022-04-22",
+    "meet": "Belgian National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:21.42",
+    "seconds": 501.42,
+    "date": "2022-04-07",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:03.08",
+    "seconds": 243.08,
+    "date": "2022-04-05",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "DNS",
+    "seconds": null,
+    "date": "2021-12-12",
+    "meet": "French Winter National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:17.29",
+    "seconds": 497.29,
+    "date": "2021-12-10",
+    "meet": "French Winter National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "3:57.93",
+    "seconds": 237.93,
+    "date": "2021-12-09",
+    "meet": "French Winter National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:03.12",
+    "seconds": 963.12,
+    "date": "2020-12-13",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:18.78",
+    "seconds": 498.78,
+    "date": "2020-12-11",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:00.52",
+    "seconds": 240.52,
+    "date": "2020-12-10",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:44.60",
+    "seconds": 944.6,
+    "date": "2019-07-27",
+    "meet": "Belgian National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:03.04",
+    "seconds": 243.04,
+    "date": "2019-07-26",
+    "meet": "Belgian National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:07.74",
+    "seconds": 487.74,
+    "date": "2019-05-19",
+    "meet": "Open Belgian Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:59.25",
+    "seconds": 959.25,
+    "date": "2019-05-17",
+    "meet": "Open Belgian Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "3:58.67",
+    "seconds": 238.67000000000002,
+    "date": "2019-04-21",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:07.58",
+    "seconds": 487.58,
+    "date": "2019-04-19",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:10.13",
+    "seconds": 490.13,
+    "date": "2018-05-12",
+    "meet": "Belgium National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:36.14",
+    "seconds": 936.14,
+    "date": "2018-05-10",
+    "meet": "Belgium National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:10.47",
+    "seconds": 490.47,
+    "date": "2017-05-14",
+    "meet": "Belgian National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:50.75",
+    "seconds": 950.75,
+    "date": "2017-05-12",
+    "meet": "Belgian National Championships (50m)"
+  }
+]

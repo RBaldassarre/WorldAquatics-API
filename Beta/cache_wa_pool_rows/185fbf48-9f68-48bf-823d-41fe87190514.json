@@ -1,0 +1,44 @@
+[
+  {
+    "event": "800 Free",
+    "time": "8:00.11",
+    "seconds": 480.11,
+    "date": "2025-06-12",
+    "meet": "2025 Canadian Trials (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:17.54",
+    "seconds": 917.54,
+    "date": "2025-06-08",
+    "meet": "2025 Canadian Trials (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "3:50.43",
+    "seconds": 230.43,
+    "date": "2025-06-07",
+    "meet": "2025 Canadian Trials (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "DNS",
+    "seconds": null,
+    "date": "2024-07-28",
+    "meet": "Speedo Canadian Championships (50m) 2024"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:28.50",
+    "seconds": 928.5,
+    "date": "2024-07-26",
+    "meet": "Speedo Canadian Championships (50m) 2024"
+  },
+  {
+    "event": "400 Free",
+    "time": "DNS",
+    "seconds": null,
+    "date": "2024-07-24",
+    "meet": "Speedo Canadian Championships (50m) 2024"
+  }
+]

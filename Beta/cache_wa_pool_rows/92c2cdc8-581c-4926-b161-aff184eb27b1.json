@@ -1,0 +1,86 @@
+[
+  {
+    "event": "400 Free",
+    "time": "4:08.35",
+    "seconds": 248.35,
+    "date": "2022-04-03",
+    "meet": "Portuguese National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:07.01",
+    "seconds": 247.01,
+    "date": "2022-04-03",
+    "meet": "Portuguese National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:19.09",
+    "seconds": 499.09,
+    "date": "2022-04-01",
+    "meet": "Portuguese National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:37.49",
+    "seconds": 937.49,
+    "date": "2022-03-31",
+    "meet": "Portuguese National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:38.78",
+    "seconds": 938.78,
+    "date": "2021-08-01",
+    "meet": "Portuguese National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:02.13",
+    "seconds": 242.13,
+    "date": "2021-07-31",
+    "meet": "Portuguese National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:14.84",
+    "seconds": 494.84,
+    "date": "2021-07-30",
+    "meet": "Portuguese National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:08.32",
+    "seconds": 248.32,
+    "date": "2019-04-07",
+    "meet": "Portuguese Junior National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:30.39",
+    "seconds": 510.39,
+    "date": "2019-04-05",
+    "meet": "Portuguese Junior National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:52.96",
+    "seconds": 952.96,
+    "date": "2019-04-04",
+    "meet": "Portuguese Junior National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:58.57",
+    "seconds": 958.57,
+    "date": "2018-07-26",
+    "meet": "Portuguese National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:59.67",
+    "seconds": 959.67,
+    "date": "2018-03-22",
+    "meet": "Portuguese Junior National Championships (50m)"
+  }
+]

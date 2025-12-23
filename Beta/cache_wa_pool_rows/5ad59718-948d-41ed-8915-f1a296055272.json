@@ -1,0 +1,93 @@
+[
+  {
+    "event": "800 Free",
+    "time": "DNS",
+    "seconds": null,
+    "date": "2022-07-17",
+    "meet": "Swiss Summer Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "DNS",
+    "seconds": null,
+    "date": "2022-07-16",
+    "meet": "Swiss Summer Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "DNS",
+    "seconds": null,
+    "date": "2022-07-14",
+    "meet": "Swiss Summer Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:15.14",
+    "seconds": 495.14,
+    "date": "2022-03-27",
+    "meet": "Swiss National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:00.22",
+    "seconds": 240.22,
+    "date": "2022-03-24",
+    "meet": "Swiss National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:42.07",
+    "seconds": 942.07,
+    "date": "2022-03-23",
+    "meet": "Swiss National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:21.30",
+    "seconds": 501.3,
+    "date": "2021-07-04",
+    "meet": "Swiss Summer National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:58.58",
+    "seconds": 958.58,
+    "date": "2021-07-03",
+    "meet": "Swiss Summer National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:04.27",
+    "seconds": 244.27,
+    "date": "2021-04-10",
+    "meet": "Swiss National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:26.56",
+    "seconds": 506.56,
+    "date": "2021-04-09",
+    "meet": "Swiss National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:55.63",
+    "seconds": 955.63,
+    "date": "2021-04-07",
+    "meet": "Swiss National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:11.39",
+    "seconds": 251.39,
+    "date": "2019-06-30",
+    "meet": "Swiss Summer National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:16.97",
+    "seconds": 976.97,
+    "date": "2019-06-29",
+    "meet": "Swiss Summer National Championships (50m)"
+  }
+]

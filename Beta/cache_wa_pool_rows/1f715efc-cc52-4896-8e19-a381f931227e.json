@@ -1,0 +1,37 @@
+[
+  {
+    "event": "1500 Free",
+    "time": "DNS",
+    "seconds": null,
+    "date": "2022-04-11",
+    "meet": "South African National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:56.31",
+    "seconds": 536.31,
+    "date": "2019-04-12",
+    "meet": "South African National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "17:02.93",
+    "seconds": 1022.93,
+    "date": "2019-04-08",
+    "meet": "South African National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:59.42",
+    "seconds": 1019.42,
+    "date": "2019-03-23",
+    "meet": "South African National Junior Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:21.52",
+    "seconds": 261.52,
+    "date": "2019-03-20",
+    "meet": "South African National Junior Championships (50m)"
+  }
+]

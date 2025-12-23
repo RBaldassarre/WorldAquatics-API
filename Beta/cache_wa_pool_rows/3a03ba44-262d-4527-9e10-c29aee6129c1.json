@@ -1,0 +1,30 @@
+[
+  {
+    "event": "1500 Free",
+    "time": "DNS",
+    "seconds": null,
+    "date": "2025-11-11",
+    "meet": "15th National Games of the People’s Republic of China Swimming 2025 (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:03.20",
+    "seconds": 243.2,
+    "date": "2025-11-10",
+    "meet": "15th National Games of the People’s Republic of China Swimming 2025 (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:41.83",
+    "seconds": 521.83,
+    "date": "2023-05-06",
+    "meet": "Chinese Spring National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:28.87",
+    "seconds": 988.87,
+    "date": "2021-06-05",
+    "meet": "Chinese National Summer Championships (50m)"
+  }
+]

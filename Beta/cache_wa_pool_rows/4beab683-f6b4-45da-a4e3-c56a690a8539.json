@@ -1,0 +1,72 @@
+[
+  {
+    "event": "400 Free",
+    "time": "4:15.57",
+    "seconds": 255.57,
+    "date": "2023-02-18",
+    "meet": "Greek National Winter Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:29.81",
+    "seconds": 929.81,
+    "date": "2023-02-17",
+    "meet": "Greek National Winter Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:30.57",
+    "seconds": 990.57,
+    "date": "2022-02-25",
+    "meet": "Greek National Winter Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:04.95",
+    "seconds": 484.95,
+    "date": "2021-06-11",
+    "meet": "Greek National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:27.94",
+    "seconds": 927.94,
+    "date": "2021-06-09",
+    "meet": "Greek National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:32.69",
+    "seconds": 932.69,
+    "date": "2019-03-03",
+    "meet": "Greek National Winter Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:07.83",
+    "seconds": 487.83,
+    "date": "2019-03-02",
+    "meet": "Greek National Winter Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "3:57.06",
+    "seconds": 237.06,
+    "date": "2019-03-01",
+    "meet": "Greek National Winter Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:30.45",
+    "seconds": 930.45,
+    "date": "2018-07-01",
+    "meet": "Greek National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:06.81",
+    "seconds": 486.81,
+    "date": "2018-06-30",
+    "meet": "Greek National Championships (50m)"
+  }
+]

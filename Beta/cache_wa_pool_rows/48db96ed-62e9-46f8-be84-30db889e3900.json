@@ -1,0 +1,65 @@
+[
+  {
+    "event": "1500 Free",
+    "time": "16:57.02",
+    "seconds": 1017.02,
+    "date": "2024-04-13",
+    "meet": "2024 South African National Aquatic Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:17.18",
+    "seconds": 257.18,
+    "date": "2024-04-11",
+    "meet": "2024 South African National Aquatic Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:55.87",
+    "seconds": 535.87,
+    "date": "2024-04-08",
+    "meet": "2024 South African National Aquatic Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:22.10",
+    "seconds": 262.1,
+    "date": "2023-04-16",
+    "meet": "South African National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:57.95",
+    "seconds": 537.95,
+    "date": "2023-04-15",
+    "meet": "South African National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "17:25.71",
+    "seconds": 1045.71,
+    "date": "2023-04-13",
+    "meet": "South African National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:26.85",
+    "seconds": 266.85,
+    "date": "2022-04-11",
+    "meet": "South African National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "9:14.39",
+    "seconds": 554.39,
+    "date": "2022-04-10",
+    "meet": "South African National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "18:02.02",
+    "seconds": 1082.02,
+    "date": "2022-04-08",
+    "meet": "South African National Championships (50m)"
+  }
+]

@@ -1,0 +1,100 @@
+[
+  {
+    "event": "800 Free",
+    "time": "8:12.29",
+    "seconds": 492.29,
+    "date": "2023-03-12",
+    "meet": "Giant Open 1st Event (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:23.50",
+    "seconds": 923.5,
+    "date": "2022-04-10",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:12.40",
+    "seconds": 492.4,
+    "date": "2022-04-07",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "3:55.27",
+    "seconds": 235.27,
+    "date": "2022-04-05",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:31.18",
+    "seconds": 931.18,
+    "date": "2021-12-12",
+    "meet": "French Winter National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:08.04",
+    "seconds": 488.04,
+    "date": "2021-12-10",
+    "meet": "French Winter National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "3:56.40",
+    "seconds": 236.4,
+    "date": "2021-12-09",
+    "meet": "French Winter National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:37.21",
+    "seconds": 937.21,
+    "date": "2020-12-13",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:05.11",
+    "seconds": 485.11,
+    "date": "2020-12-11",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "3:56.22",
+    "seconds": 236.22,
+    "date": "2020-12-10",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:23.52",
+    "seconds": 503.52,
+    "date": "2019-04-19",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "DSQ",
+    "seconds": null,
+    "date": "2019-04-16",
+    "meet": "French National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:01.23",
+    "seconds": 241.23,
+    "date": "2019-03-14",
+    "meet": "French Junior National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "15:53.92",
+    "seconds": 953.92,
+    "date": "2019-03-12",
+    "meet": "French Junior National Championships (50m)"
+  }
+]

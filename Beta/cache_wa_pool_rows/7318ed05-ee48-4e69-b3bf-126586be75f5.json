@@ -1,0 +1,51 @@
+[
+  {
+    "event": "1500 Free",
+    "time": "18:52.02",
+    "seconds": 1132.02,
+    "date": "2025-08-14",
+    "meet": "2025 JPAG Asunción (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "9:29.45",
+    "seconds": 569.45,
+    "date": "2025-08-12",
+    "meet": "2025 JPAG Asunción (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:36.79",
+    "seconds": 276.79,
+    "date": "2025-08-10",
+    "meet": "2025 JPAG Asunción (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:37.69",
+    "seconds": 277.69,
+    "date": "2023-04-29",
+    "meet": "Argentinian National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "9:40.56",
+    "seconds": 580.56,
+    "date": "2023-04-26",
+    "meet": "Argentinian National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:46.33",
+    "seconds": 286.33,
+    "date": "2021-12-10",
+    "meet": "Paraguayan National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:57.25",
+    "seconds": 297.25,
+    "date": "2021-04-23",
+    "meet": "Paraguay Junior National Championships (50m)"
+  }
+]

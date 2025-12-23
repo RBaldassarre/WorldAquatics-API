@@ -1,0 +1,37 @@
+[
+  {
+    "event": "1500 Free",
+    "time": "17:10.43",
+    "seconds": 1030.43,
+    "date": "2025-08-03",
+    "meet": "2025 Slovenian National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "9:03.00",
+    "seconds": 543.0,
+    "date": "2025-08-02",
+    "meet": "2025 Slovenian National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:27.87",
+    "seconds": 267.87,
+    "date": "2025-08-01",
+    "meet": "2025 Slovenian National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "9:04.25",
+    "seconds": 544.25,
+    "date": "2020-10-16",
+    "meet": "Slovenian National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:27.95",
+    "seconds": 267.95,
+    "date": "2020-10-15",
+    "meet": "Slovenian National Championships (50m)"
+  }
+]

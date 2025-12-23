@@ -1,0 +1,107 @@
+[
+  {
+    "event": "1500 Free",
+    "time": "16:12.44",
+    "seconds": 972.44,
+    "date": "2022-07-30",
+    "meet": "Phillips 66 National Championships (50m) 2022"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:12.53",
+    "seconds": 252.53,
+    "date": "2022-07-29",
+    "meet": "Phillips 66 National Championships (50m) 2022"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:31.12",
+    "seconds": 511.12,
+    "date": "2022-07-26",
+    "meet": "Phillips 66 National Championships (50m) 2022"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:27.37",
+    "seconds": 987.37,
+    "date": "2019-12-07",
+    "meet": "USA Winter National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:13.86",
+    "seconds": 253.86,
+    "date": "2019-12-05",
+    "meet": "USA Winter National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:38.56",
+    "seconds": 518.56,
+    "date": "2019-12-04",
+    "meet": "USA Winter National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:19.29",
+    "seconds": 979.29,
+    "date": "2018-07-29",
+    "meet": "US National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:13.53",
+    "seconds": 253.53,
+    "date": "2018-07-28",
+    "meet": "US National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:28.15",
+    "seconds": 508.15,
+    "date": "2018-07-25",
+    "meet": "US National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:58.07",
+    "seconds": 1018.07,
+    "date": "2017-08-06",
+    "meet": "US National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:49.04",
+    "seconds": 529.04,
+    "date": "2017-08-02",
+    "meet": "US National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:20.69",
+    "seconds": 260.69,
+    "date": "2017-07-23",
+    "meet": "OH MAKO Junior Olympic (50m) 2017"
+  },
+  {
+    "event": "1500 Free",
+    "time": "17:14.64",
+    "seconds": 1034.64,
+    "date": "2017-07-20",
+    "meet": "OH MAKO Junior Olympic (50m) 2017"
+  },
+  {
+    "event": "800 Free",
+    "time": "9:01.11",
+    "seconds": 541.11,
+    "date": "2017-07-20",
+    "meet": "OH MAKO Junior Olympic (50m) 2017"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:21.93",
+    "seconds": 261.93,
+    "date": "2017-06-30",
+    "meet": "US National Championships (50m)"
+  }
+]

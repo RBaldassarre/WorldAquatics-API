@@ -1,0 +1,86 @@
+[
+  {
+    "event": "800 Free",
+    "time": "8:38.68",
+    "seconds": 518.68,
+    "date": "2024-02-24",
+    "meet": "2024 Spanish Winter Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:34.58",
+    "seconds": 994.58,
+    "date": "2024-02-22",
+    "meet": "2024 Spanish Winter Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:13.79",
+    "seconds": 253.79,
+    "date": "2024-02-21",
+    "meet": "2024 Spanish Winter Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:15.00",
+    "seconds": 255.0,
+    "date": "2022-04-13",
+    "meet": "Spanish Spring National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:20.66",
+    "seconds": 980.66,
+    "date": "2022-04-11",
+    "meet": "Spanish Spring National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:36.23",
+    "seconds": 516.23,
+    "date": "2022-04-09",
+    "meet": "Spanish Spring National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:42.99",
+    "seconds": 522.99,
+    "date": "2021-08-06",
+    "meet": "Spanish Junior National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:14.41",
+    "seconds": 254.41,
+    "date": "2021-08-05",
+    "meet": "Spanish Junior National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:32.90",
+    "seconds": 992.9,
+    "date": "2021-08-03",
+    "meet": "Spanish Junior National Championships (50m)"
+  },
+  {
+    "event": "400 Free",
+    "time": "4:17.30",
+    "seconds": 257.3,
+    "date": "2021-03-28",
+    "meet": "Spanish National Championships (50m)"
+  },
+  {
+    "event": "1500 Free",
+    "time": "16:28.25",
+    "seconds": 988.25,
+    "date": "2021-03-26",
+    "meet": "Spanish National Championships (50m)"
+  },
+  {
+    "event": "800 Free",
+    "time": "8:41.33",
+    "seconds": 521.33,
+    "date": "2021-03-24",
+    "meet": "Spanish National Championships (50m)"
+  }
+]
