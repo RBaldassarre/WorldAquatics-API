@@ -46,26 +46,58 @@ Interactive: lets you choose the OW event you wantYou can **modify or extend** t
 
 ### `API_WorldAquatics_CompetitionsID.py`
 
-Fetches all World Aquatics competitions for one or more years.
-
-Returns:
+Analyzes World Aquatics competitions for one or more years.
+The script retrieves all official competitions and extracts:
 
 - Competition ID
 - Name, city, country
 - Disciplines involved (`SW`, `OW`, `WP`, etc.)
 - Start and end dates
 
-Results are saved as an Excel file in the `output_competitionID/` folder.
+Results are exported to an Excel file and saved in the
+ `output_competitionsID/` folder.
 
-Configurable options inside the script:
+**Usage from terminal**
+You can specify the years directly from the command line:
 
 ```python
-years = [2024, 2025]   # or [2024] or [2024, 2025, 2026]
+python API_WorldAquatics_CompetitionsID.py 2022
+python API_WorldAquatics_CompetitionsID.py 2022,2023
+python API_WorldAquatics_CompetitionsID.py 2020 to 2023
+```
+
+If no years are provided, the script analyzes **all competitions from 2000 to 2025** by default.
+
+**Configurable options inside the script**
+
+```
+disciplines_filter = ["OW"]  # SW, OW, DV, WT, HY or [] for all
+```
+
+The output Excel file is automatically named according to the selected year range(e.g. `competitions_2020_to_2023.xlsx`).
+
+**Discipline filter (optional)**
+By default, the script analyzes **Open Water (OW)** competitions only.
+You can change the default behavior inside the script or override it from the command line by specifying one or more discipline codes (`SW`, `OW`, `DV`, `WT`, `HY`).
+
+```
+disciplines_filter = ["OW"]  # [] means all disciplines
+```
+
+Examples:
+
+```
+python API_WorldAquatics_CompetitionsID.py 2022 OW
+python API_WorldAquatics_CompetitionsID.py 2022 OW,SW
+python API_WorldAquatics_CompetitionsID.py 2022 ALL
+
+python API_WorldAquatics_CompetitionsID.py 2022 to 2025 OW
+python API_WorldAquatics_CompetitionsID.py 2022 to 2025 ALL
 ```
 
 ### `API_WorldAquatics.py`
 
-Fetches athlete data by:
+Fetches athlete data by:to 2025 OW
 
 - Discipline (`SW`, `OW`, etc.)
 - Gender (`M`, `F`, or all)
