@@ -1,8 +1,7 @@
-# API_WorldAquatics_OW_Pool_Results_Integration_Beta (MULTI COMPETITIONS + PROGRESS + CSV)
+# API_WorldAquatics_OW_Pool_Results_Integration_Beta (MULTI COMPETITIONS + PROGRESS + SINGLE CSV)
 from __future__ import annotations
 
 import os
-import re
 import sys
 import time
 import json
@@ -10,7 +9,6 @@ import glob
 import shutil
 import logging
 import threading
-import unicodedata
 from datetime import datetime, date
 from typing import Any, Dict, List, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -30,16 +28,14 @@ except Exception:
 AUTO_PICK_10KM = True
 
 # Output
-OUTPUT_BASENAME = "ow_pool_join"   # -> *_ALL.csv, *_Women.csv, *_Men.csv
 WRITE_XLSX = False
-OUTPUT_XLSX = "ow_pool_join.xlsx"
 
 # Cache
 CACHE_TTL_SECONDS: Optional[int] = 30 * 24 * 3600  # None -> never refresh
 CLEANUP_CACHE_AT_END = False
 
-# Degug
-LIMIT_ATHLETES = 10  # None oppure 0 -> no limit
+# Debug
+LIMIT_ATHLETES = 10  # None or 0 -> no limit
 
 # Concurrency
 MAX_WORKERS = 8
@@ -101,15 +97,17 @@ def _bar(done: int, total: int, width: int = 24) -> str:
     filled = int(ratio * width)
     return "[" + "#" * filled + "." * (width - filled) + f"] {int(ratio * 100):3d}%"
 
+
 def _print_progress(section_label: str, sec_done: int, sec_total: int,
                     global_done: int, global_total: int) -> None:
     line1 = f"{section_label:<18} {_bar(sec_done, sec_total)}  ({sec_done}/{sec_total})"
-    line2 = f"{'Competitions:':<18} {_bar(global_done, global_total)}  ({global_done}/{global_total})"
+    line2 = f"{'Competition:':<18} {_bar(global_done, global_total)}  ({global_done}/{global_total})"
     with _PRINT_LOCK:
         sys.stdout.write("\x1b[2A")  # up 2 lines
         sys.stdout.write("\r" + line1 + " " * 10 + "\n")
         sys.stdout.write("\r" + line2 + " " * 10 + "\n")
         sys.stdout.flush()
+
 
 # =======================
 # HTTP + cache helpers
@@ -140,6 +138,7 @@ def _is_cache_fresh(path: str, ttl_seconds: Optional[int]) -> bool:
     except Exception:
         return False
 
+
 def http_get_json(url: str, headers: dict) -> Any:
     last_err: Optional[Exception] = None
     sess = _get_session()
@@ -157,6 +156,7 @@ def http_get_json(url: str, headers: dict) -> Any:
 
     raise RuntimeError(f"GET failed: {url} -> {last_err}")
 
+
 def _read_json_file(path: str) -> Any:
     try:
         if HAS_ORJSON:
@@ -166,6 +166,7 @@ def _read_json_file(path: str) -> Any:
             return json.load(f)
     except Exception:
         return None
+
 
 def _write_json_file(path: str, obj: Any) -> None:
     try:
@@ -185,18 +186,10 @@ def _write_json_file(path: str, obj: Any) -> None:
     except Exception:
         pass
 
+
 # =======================
 # Generic helpers
 # =======================
-def norm_name(s: str) -> str:
-    if not s:
-        return ""
-    s = unicodedata.normalize("NFKD", s)
-    s = "".join(ch for ch in s if not unicodedata.combining(ch))
-    s = re.sub(r"[^A-Za-z\s\-']", " ", s)
-    s = re.sub(r"\s+", " ", s).strip()
-    return s
-
 def parse_iso_date(s: str) -> Optional[date]:
     if not s:
         return None
@@ -209,6 +202,7 @@ def parse_iso_date(s: str) -> Optional[date]:
     except Exception:
         return None
 
+
 def _to_date(v: Any) -> Optional[date]:
     if v is None:
         return None
@@ -219,6 +213,7 @@ def _to_date(v: Any) -> Optional[date]:
     if isinstance(v, str):
         return parse_iso_date(v)
     return None
+
 
 # =======================
 # Pool mapping
@@ -252,6 +247,7 @@ def wa_guess_event_key(label: str) -> Optional[str]:
         return "1500 Free"
     return None
 
+
 def wa_course_from_text(*texts: Optional[str]) -> Optional[str]:
     joined = " | ".join([str(t) for t in texts if t]).lower()
     if "25m" in joined or "25 m" in joined or "scm" in joined or "(25" in joined:
@@ -259,6 +255,7 @@ def wa_course_from_text(*texts: Optional[str]) -> Optional[str]:
     if "50m" in joined or "50 m" in joined or "lcm" in joined or "(50" in joined:
         return "LCM"
     return None
+
 
 def wa_extract_pool_rows(js: Any) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
@@ -271,13 +268,41 @@ def wa_extract_pool_rows(js: Any) -> List[Dict[str, Any]]:
         return s or None
 
     def _pick_country(d: Dict[str, Any]) -> Optional[str]:
-        # Meeting country only (3-letter code)
-        v = d.get("CountryCode") or d.get("HostCountryCode")
-        if not v:
-            return None
-        s = str(v).strip().upper()
-        return s if len(s) == 3 else None
+        """Best-effort: return 3-letter meet country code (e.g., ITA) from any known WA fields."""
 
+        def _norm3(v: Any) -> Optional[str]:
+            if v is None:
+                return None
+            s = str(v).strip().upper()
+            return s if len(s) == 3 and s.isalpha() else None
+
+        # Common direct keys (various WA payload variants)
+        for k in (
+            "CountryCode", "countryCode",
+            "HostCountryCode", "hostCountryCode",
+            "VenueCountryCode", "venueCountryCode",
+            "MeetCountryCode", "meetCountryCode",
+        ):
+            cc = _norm3(d.get(k))
+            if cc:
+                return cc
+
+        # Sometimes nested under Location/Venue/Competition/etc.
+        for k in ("Location", "location", "Venue", "venue", "Competition", "competition", "Meet", "meet"):
+            obj = d.get(k)
+            if isinstance(obj, dict):
+                cc = _pick_country(obj)
+                if cc:
+                    return cc
+
+        # Very generic fallback: scan for any key containing 'country' with a 3-letter code value
+        for k, v in d.items():
+            if "country" in str(k).lower():
+                cc = _norm3(v)
+                if cc:
+                    return cc
+
+        return None
 
     def visit(x: Any, parents: List[Dict[str, Any]]) -> None:
         if isinstance(x, dict):
@@ -298,11 +323,7 @@ def wa_extract_pool_rows(js: Any) -> List[Dict[str, Any]]:
                             if ev_key:
                                 break
 
-                d_iso = None
-                if isinstance(date_val, str):
-                    d_iso = parse_iso_date(date_val)
-                elif isinstance(date_val, (datetime, date)):
-                    d_iso = date_val if isinstance(date_val, date) else date_val.date()
+                d_iso = _to_date(date_val)
 
                 t_str = str(time_val) if time_val is not None else ""
 
@@ -316,8 +337,9 @@ def wa_extract_pool_rows(js: Any) -> List[Dict[str, Any]]:
                         comp_countries.append(_pick_country(obj))
 
                 for p in reversed(parents):
-                    comp_names.append(_pick_comp_name(p))
-                    comp_countries.append(_pick_country(p))
+                    if isinstance(p, dict):
+                        comp_names.append(_pick_comp_name(p))
+                        comp_countries.append(_pick_country(p))
 
                 course = wa_course_from_text(*comp_names)
                 if ev_key and d_iso and course == "LCM":
@@ -563,7 +585,7 @@ def fetch_wa_pool_best_attempt(wa_id: str, ow_date: date) -> Dict[str, Dict[str,
 # =======================
 # Read competitions from xlsx
 # =======================
-def load_competition_ids_from_xlsx() -> Tuple[List[str], str]:
+def load_competitions_from_xlsx() -> Tuple[List[str], str, Dict[str, Optional[str]]]:
     pattern = os.path.join(BASE_DIR, "competitions_*.xlsx")
     matches = sorted(glob.glob(pattern))
 
@@ -572,7 +594,7 @@ def load_competition_ids_from_xlsx() -> Tuple[List[str], str]:
         sys.exit(1)
 
     xlsx_path = matches[0]
-    input_stem = os.path.splitext(os.path.basename(xlsx_path))[0]  # e.g. competitions_2020_2025
+    input_stem = os.path.splitext(os.path.basename(xlsx_path))[0]
     lg.info("Using competitions file: %s", os.path.basename(xlsx_path))
 
     df = pd.read_excel(xlsx_path)
@@ -580,6 +602,7 @@ def load_competition_ids_from_xlsx() -> Tuple[List[str], str]:
         print(f"No competition IDs in {xlsx_path}")
         sys.exit(1)
 
+    # id column
     col_id = None
     for c in df.columns:
         if str(c).strip().lower() == "id":
@@ -588,27 +611,52 @@ def load_competition_ids_from_xlsx() -> Tuple[List[str], str]:
     if col_id is None:
         col_id = df.columns[0]
 
-    ids: List[str] = []
-    for v in df[col_id].tolist():
-        if pd.isna(v):
-            continue
-        s = str(v).strip()
-        if not s:
-            continue
-        ids.append(s)
+    # country column (best-effort)
+    col_country = None
+    for c in df.columns:
+        lc = str(c).strip().lower()
+        if lc in {"countrycode", "country_code", "country", "countryname", "country_name"}:
+            col_country = c
+            break
 
-    ids = [x for i, x in enumerate(ids) if x not in ids[:i]]  # unique keep order
-    if not ids:
+    comp_ids: List[str] = []
+    comp_country: Dict[str, Optional[str]] = {}
+
+    for _, row in df.iterrows():
+        v_id = row.get(col_id)
+        if pd.isna(v_id):
+            continue
+        cid = str(v_id).strip()
+        if not cid:
+            continue
+
+        comp_ids.append(cid)
+
+        cc = None
+        if col_country is not None:
+            v_cc = row.get(col_country)
+            if v_cc is not None and not pd.isna(v_cc):
+                cc = str(v_cc).strip().upper()
+                cc = cc if cc else None
+
+        comp_country[cid] = cc
+
+    comp_ids = [x for i, x in enumerate(comp_ids) if x not in comp_ids[:i]]
+
+    if not comp_ids:
         print(f"No competition IDs found in column '{col_id}' inside {xlsx_path}")
         sys.exit(1)
 
-    return ids, input_stem
+    return comp_ids, input_stem, comp_country
+
 
 # =======================
 # Athlete processing
 # =======================
 def process_athlete(a: Dict[str, Any], ev_name: str, ev_gender: str, ow_date: date,
-                    comp_name: str, ow_country_code: str) -> Tuple[str, List[Dict[str, Any]]]:
+                    comp_name: str, ow_country_code: Optional[str], ow_comp_country: Optional[str]
+                    ) -> Tuple[str, List[Dict[str, Any]]]:
+
     wa_id = a.get("wa_id", "")
     full_name = a.get("full_name", "")
     nat = a.get("nat", "")
@@ -637,16 +685,21 @@ def process_athlete(a: Dict[str, Any], ev_name: str, ev_gender: str, ow_date: da
     for pool_event in POOL_EVENTS:
         wa_ev = wa_pool.get(pool_event, {}) if isinstance(wa_pool, dict) else {}
 
+        # Pool meet country only (do not fallback to OW competition country)
+        sb_cty = wa_ev.get("sb_ytd_country")
+        pb_cty = wa_ev.get("pb_upto_country")
+
         out_rows.append({
             "Competition": comp_name,
             "Country": ow_country_code,
+            # "OW_CompetitionCountry": ow_comp_country,
             "OW_Event": ev_name,
             "OW_Date": ow_date.isoformat(),
 
-            "WA_ID": wa_id,
+            # "WA_ID": wa_id,
             "Athlete": full_name,
             "NAT": nat,
-            "Sex": wa_sex,
+            # "Sex": wa_sex,
             "Birth": wa_birth,
 
             "OW_Rank": ow_rank,
@@ -657,28 +710,37 @@ def process_athlete(a: Dict[str, Any], ev_name: str, ev_gender: str, ow_date: da
             "WA_SB_YTD_Time": wa_ev.get("sb_ytd_time"),
             "WA_SB_YTD_Date": wa_ev.get("sb_ytd_date"),
             "WA_SB_Upto_Meet": wa_ev.get("sb_ytd_meet"),
-            "WA_SB_Upto_Country": wa_ev.get("sb_ytd_country"),
+            "WA_SB_Upto_Country": sb_cty,
 
             "WA_PB_Upto_Time": wa_ev.get("pb_upto_time"),
             "WA_PB_Upto_Date": wa_ev.get("pb_upto_date"),
             "WA_PB_Upto_Meet": wa_ev.get("pb_upto_meet"),
-            "WA_PB_Upto_Country": wa_ev.get("pb_upto_country"),
+            "WA_PB_Upto_Country": pb_cty,
         })
 
     return ev_gender, out_rows
 
+
 def save_csv(df: pd.DataFrame, path: str) -> None:
     df.to_csv(path, index=False, encoding="utf-8-sig")
 
+
 # =======================
-# Analyze one race (one competition)
+# Analyze one competition
 # =======================
-def analyze_race(competition_id: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+def analyze_race(
+    competition_id: str,
+    comp_country_map: Dict[str, Optional[str]]
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+
+    ow_comp_country = comp_country_map.get(competition_id)
+
     meta = fetch_competition_meta(competition_id)
     comp_name = meta.get("Name", "")
     comp_from = parse_iso_date(meta.get("From", ""))
     comp_to = parse_iso_date(meta.get("To", ""))
-    ow_country_code = meta.get("CountryCode")
+
+    ow_country_code = meta.get("CountryCode") or ow_comp_country
 
     lg.info("Competition: %s (%s -> %s) [id=%s]", comp_name, comp_from, comp_to, competition_id)
 
@@ -693,13 +755,18 @@ def analyze_race(competition_id: str) -> Tuple[List[Dict[str, Any]], List[Dict[s
         lg.warning("Cannot determine OW date for competition_id=%s", competition_id)
         return [], [], []
 
-    # Pre-fetch athletes per event to get totals for the competition progress
+    # Pre-fetch athletes per event to get correct totals for progress
     event_athletes: Dict[str, List[Dict[str, Any]]] = {}
     comp_total = 0
+
     for ev in picked:
         ev_id = ev["id"]
         ats = fetch_event_results(ev_id)
         ats = [a for a in ats if a.get("ow_rank")]
+
+        if LIMIT_ATHLETES:
+            ats = ats[:LIMIT_ATHLETES]
+
         event_athletes[ev_id] = ats
         comp_total += len(ats)
 
@@ -715,22 +782,26 @@ def analyze_race(competition_id: str) -> Tuple[List[Dict[str, Any]], List[Dict[s
         ev_id = ev["id"]
 
         athletes = event_athletes.get(ev_id, [])
-        if LIMIT_ATHLETES:
-            athletes = athletes[:LIMIT_ATHLETES]
         sec_total = len(athletes)
         sec_done = 0
 
         lg.info("OW event: %s (%s) id=%s", ev_name, ev_gender, ev_id)
         lg.info("Athletes: %d", sec_total)
 
-        # Reserve 2 lines
+        # Reserve 2 lines for progress bar
         print("\n\n", end="")
         _print_progress(f"Section: {ev_gender}", 0, sec_total, comp_done, comp_total)
 
         futures = []
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
             for a in athletes:
-                futures.append(ex.submit(process_athlete, a, ev_name, ev_gender, ow_date, comp_name, ow_country_code))
+                futures.append(
+                    ex.submit(
+                        process_athlete,
+                        a, ev_name, ev_gender, ow_date,
+                        comp_name, ow_country_code, ow_comp_country
+                    )
+                )
 
             last_print = time.time()
             for fut in as_completed(futures):
@@ -753,22 +824,23 @@ def analyze_race(competition_id: str) -> Tuple[List[Dict[str, Any]], List[Dict[s
                     _print_progress(f"Section: {ev_gender}", sec_done, sec_total, comp_done, comp_total)
                     last_print = now
 
-        print()  # close block
+        print()
 
     return rows_all, rows_women, rows_men
+
 
 # =======================
 # Main
 # =======================
 def main() -> None:
-    comp_ids, input_stem = load_competition_ids_from_xlsx()
+    comp_ids, input_stem, comp_country_map = load_competitions_from_xlsx()
     lg.info("Competitions to analyze: %d", len(comp_ids))
 
     rows_all: List[Dict[str, Any]] = []
 
     for idx, cid in enumerate(comp_ids, 1):
         lg.info("==== [%d/%d] Analyzing competition_id=%s ====", idx, len(comp_ids), cid)
-        ra, _, _ = analyze_race(cid)  # keep only ALL
+        ra, _, _ = analyze_race(cid, comp_country_map)
         rows_all.extend(ra)
 
     if not rows_all:
@@ -777,14 +849,15 @@ def main() -> None:
 
     df_all = pd.DataFrame(rows_all)
 
-    out_single = os.path.join(BASE_DIR, f"ow_pool_join_{input_stem}.csv")
-    save_csv(df_all, out_single)
-    lg.info("Saved: %s", out_single)
+    out_csv = os.path.join(BASE_DIR, f"ow_pool_join_{input_stem}.csv")
+    save_csv(df_all, out_csv)
+    lg.info("Saved: %s", out_csv)
 
     if WRITE_XLSX:
         out_xlsx = os.path.join(BASE_DIR, f"ow_pool_join_{input_stem}.xlsx")
         df_all.to_excel(out_xlsx, index=False)
         lg.info("Saved: %s", out_xlsx)
+
 
 if __name__ == "__main__":
     try:

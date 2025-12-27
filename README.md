@@ -95,6 +95,17 @@ python API_WorldAquatics_CompetitionsID.py 2022 to 2025 OW
 python API_WorldAquatics_CompetitionsID.py 2022 to 2025 ALL
 ```
 
+**Level competitions filter (optional)**
+World Aquatics does not provide a dedicated field to explicitly distinguish **Senior / Absolute** competitions from **Junior, Youth, or Masters** events.
+For this reason, the script applies a **best-effort heuristic filter** based on competition metadata.
+When enabled, competitions whose name or type contains keywords such as **Masters**, **Junior**, **Youth**, **U18**, **U20**, **Age Group**, etc. are automatically excluded.
+This allows the analysis to focus on **senior / elite competitions only**.
+The filter can be enabled or disabled directly in the script:
+
+```python
+absolute_only = True  # exclude masters/junior/youth competitions
+```
+
 ### `API_WorldAquatics.py`
 
 Fetches athlete data by:to 2025 OW

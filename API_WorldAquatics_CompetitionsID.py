@@ -63,12 +63,51 @@ def split_years_and_disciplines(argv):
 
     return years_tokens, disc_tokens
 
+
+# Competition level filter (heuristic)
+EXCLUDE_LEVEL_KEYWORDS = [
+    "masters",
+    "junior",
+    "youth",
+    "age group",
+    "age-group",
+    "u23",
+    "u20",
+    "u19",
+    "u18",
+    "u17",
+    "u16",
+    "u15",
+    "u14",
+]
+
+def is_absolute_competition(comp):
+    """Return True if competition looks like senior/elite (not masters/junior)."""
+    name = comp.get("name") or ""
+
+    comp_type_raw = comp.get("competitionType")
+
+    if isinstance(comp_type_raw, dict):
+        comp_type = (
+            comp_type_raw.get("name")
+            or comp_type_raw.get("code")
+            or ""
+        )
+    else:
+        comp_type = comp_type_raw or ""
+
+    text = f"{name} {comp_type}".lower().strip()
+
+    return not any(k in text for k in EXCLUDE_LEVEL_KEYWORDS)
+
 def main():
 
     # Years and disciplines input
     years_args, disc_args = split_years_and_disciplines(sys.argv[1:])
     years = sorted(years_input(years_args))
     disciplines_filter = disciplines_input(disc_args)
+
+    absolute_only = True  # True: exclude masters/junior/youth by keywords
 
     all_comps = []
 
@@ -114,6 +153,10 @@ def main():
                 break
             page += 1
 
+    # Filter out masters/junior/youth competitions (best-effort)
+    if absolute_only:
+        all_comps = [c for c in all_comps if is_absolute_competition(c)]
+
     # Build rows
     rows = []
     for c in all_comps:
@@ -132,6 +175,7 @@ def main():
             }
         )
 
+    # Create DataFrame
     df = pd.DataFrame(rows)
 
     # Filter disciplines (OR)
