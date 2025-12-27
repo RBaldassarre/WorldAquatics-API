@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 import time
 import json
@@ -32,7 +33,7 @@ WRITE_XLSX = False
 
 # Cache
 CACHE_TTL_SECONDS: Optional[int] = 30 * 24 * 3600  # None -> never refresh
-CLEANUP_CACHE_AT_END = False
+CLEANUP_CACHE_AT_END = True
 
 # Debug
 LIMIT_ATHLETES = 10  # None or 0 -> no limit
@@ -82,6 +83,10 @@ _WA_POOL_ROWS_CACHE: Dict[str, List[Dict[str, Any]]] = {}
 _WA_PROFILE_CACHE: Dict[str, Dict[str, Any]] = {}
 _POOL_LOCK = threading.Lock()
 _PROFILE_LOCK = threading.Lock()
+
+# Meet/competition country cache (pool side)
+_MEET_COUNTRY_CACHE: Dict[str, Optional[str]] = {}
+_MEET_COUNTRY_LOCK = threading.Lock()
 
 # Progress print lock
 _PRINT_LOCK = threading.Lock()
@@ -273,6 +278,18 @@ def wa_extract_pool_rows(js: Any) -> List[Dict[str, Any]]:
         def _norm3(v: Any) -> Optional[str]:
             if v is None:
                 return None
+
+            # Sometimes country is a nested object
+            if isinstance(v, dict):
+                for kk in ("code", "Code", "ioc", "IOC", "alpha3", "Alpha3", "countryCode", "CountryCode"):
+                    vv = v.get(kk)
+                    if vv is None:
+                        continue
+                    s2 = str(vv).strip().upper()
+                    if len(s2) == 3 and s2.isalpha():
+                        return s2
+                return None
+
             s = str(v).strip().upper()
             return s if len(s) == 3 and s.isalpha() else None
 
@@ -288,7 +305,7 @@ def wa_extract_pool_rows(js: Any) -> List[Dict[str, Any]]:
                 return cc
 
         # Sometimes nested under Location/Venue/Competition/etc.
-        for k in ("Location", "location", "Venue", "venue", "Competition", "competition", "Meet", "meet"):
+        for k in ("Location", "location", "Venue", "venue", "Competition", "competition", "Meet", "meet", "Country", "country"):
             obj = d.get(k)
             if isinstance(obj, dict):
                 cc = _pick_country(obj)
@@ -301,6 +318,36 @@ def wa_extract_pool_rows(js: Any) -> List[Dict[str, Any]]:
                 cc = _norm3(v)
                 if cc:
                     return cc
+
+        return None
+
+    def _pick_comp_id(d: Dict[str, Any]) -> Optional[str]:
+        """Best-effort: extract a meet/competition id (string) from common WA fields."""
+
+        def _norm_id(v: Any) -> Optional[str]:
+            if v is None:
+                return None
+            s = str(v).strip()
+            return s or None
+
+        # Direct keys
+        for k in (
+            "CompetitionId", "competitionId",
+            "MeetId", "meetId",
+            "CompetitionID", "MeetID",
+            "Id", "id",
+        ):
+            cid = _norm_id(d.get(k))
+            if cid:
+                return cid
+
+        # Nested containers
+        for k in ("Competition", "competition", "Meet", "meet", "Event", "event", "Race", "race"):
+            obj = d.get(k)
+            if isinstance(obj, dict):
+                cid = _pick_comp_id(obj)
+                if cid:
+                    return cid
 
         return None
 
@@ -350,6 +397,7 @@ def wa_extract_pool_rows(js: Any) -> List[Dict[str, Any]]:
                         "date": d_iso,
                         "meet": next((c for c in comp_names if c), None),
                         "country": next((c for c in comp_countries if c), None),
+                        "comp_id": _pick_comp_id(x) or _pick_comp_id(parents[-1]) if parents else None,
                     })
 
             new_parents = parents + [x]
@@ -362,6 +410,28 @@ def wa_extract_pool_rows(js: Any) -> List[Dict[str, Any]]:
 
     visit(js, [])
     return rows
+def get_meet_country_code(meet_id: Optional[str]) -> Optional[str]:
+    """Resolve pool meet/competition country code (3 letters) via WA competition meta, cached."""
+    if not meet_id:
+        return None
+
+    with _MEET_COUNTRY_LOCK:
+        if meet_id in _MEET_COUNTRY_CACHE:
+            return _MEET_COUNTRY_CACHE[meet_id]
+
+    cc: Optional[str] = None
+    try:
+        meta = fetch_competition_meta(str(meet_id))
+        v = meta.get("CountryCode")
+        if v:
+            s = str(v).strip().upper()
+            cc = s if len(s) == 3 and s.isalpha() else None
+    except Exception:
+        cc = None
+
+    with _MEET_COUNTRY_LOCK:
+        _MEET_COUNTRY_CACHE[meet_id] = cc
+    return cc
 
 
 def wa_compute_pool_bests(rows: List[Dict[str, Any]], ow_date: date) -> Dict[str, Dict[str, Optional[str]]]:
@@ -390,7 +460,10 @@ def wa_compute_pool_bests(rows: List[Dict[str, Any]], ow_date: date) -> Dict[str
         out[ev]["pb_upto_time"] = best_pb.get("time")
         out[ev]["pb_upto_date"] = best_pb["date"].isoformat() if best_pb.get("date") else None
         out[ev]["pb_upto_meet"] = best_pb.get("meet")
-        out[ev]["pb_upto_country"] = best_pb.get("country")
+        pb_cc = best_pb.get("country")
+        if not pb_cc:
+            pb_cc = get_meet_country_code(best_pb.get("comp_id"))
+        out[ev]["pb_upto_country"] = pb_cc
 
         ev_ytd = [r for r in ev_rows if r.get("date") and r["date"].year == ow_date.year]
         if ev_ytd:
@@ -398,7 +471,10 @@ def wa_compute_pool_bests(rows: List[Dict[str, Any]], ow_date: date) -> Dict[str
             out[ev]["sb_ytd_time"] = best_ytd.get("time")
             out[ev]["sb_ytd_date"] = best_ytd["date"].isoformat() if best_ytd.get("date") else None
             out[ev]["sb_ytd_meet"] = best_ytd.get("meet")
-            out[ev]["sb_ytd_country"] = best_ytd.get("country")
+            sb_cc = best_ytd.get("country")
+            if not sb_cc:
+                sb_cc = get_meet_country_code(best_ytd.get("comp_id"))
+            out[ev]["sb_ytd_country"] = sb_cc
 
     return out
 
@@ -654,7 +730,7 @@ def load_competitions_from_xlsx() -> Tuple[List[str], str, Dict[str, Optional[st
 # Athlete processing
 # =======================
 def process_athlete(a: Dict[str, Any], ev_name: str, ev_gender: str, ow_date: date,
-                    comp_name: str, ow_country_code: Optional[str], ow_comp_country: Optional[str]
+                    comp_name: str, ow_country_code: Optional[str]
                     ) -> Tuple[str, List[Dict[str, Any]]]:
 
     wa_id = a.get("wa_id", "")
@@ -667,7 +743,6 @@ def process_athlete(a: Dict[str, Any], ev_name: str, ev_gender: str, ow_date: da
         return ev_gender, []
 
     profile = fetch_wa_profile(wa_id)
-    wa_sex = profile.get("Gender") or profile.get("Sex") or ev_gender
     wa_birth = (
         profile.get("DOB")
         or profile.get("DateOfBirth")
@@ -686,20 +761,29 @@ def process_athlete(a: Dict[str, Any], ev_name: str, ev_gender: str, ow_date: da
         wa_ev = wa_pool.get(pool_event, {}) if isinstance(wa_pool, dict) else {}
 
         # Pool meet country only (do not fallback to OW competition country)
-        sb_cty = wa_ev.get("sb_ytd_country")
-        pb_cty = wa_ev.get("pb_upto_country")
+        sb_country = wa_ev.get("sb_ytd_country")
+        pb_country = wa_ev.get("pb_upto_country")
+
+        # Fallback: try to infer a 3-letter country code from the meet title if API country is missing
+        if not sb_country:
+            meet = wa_ev.get("sb_ytd_meet")
+            if meet:
+                m = re.search(r"\b[A-Z]{3}\b", str(meet).upper())
+                sb_country = m.group(0) if m else None
+        if not pb_country:
+            meet = wa_ev.get("pb_upto_meet")
+            if meet:
+                m = re.search(r"\b[A-Z]{3}\b", str(meet).upper())
+                pb_country = m.group(0) if m else None
 
         out_rows.append({
             "Competition": comp_name,
             "Country": ow_country_code,
-            # "OW_CompetitionCountry": ow_comp_country,
             "OW_Event": ev_name,
             "OW_Date": ow_date.isoformat(),
 
-            # "WA_ID": wa_id,
             "Athlete": full_name,
             "NAT": nat,
-            # "Sex": wa_sex,
             "Birth": wa_birth,
 
             "OW_Rank": ow_rank,
@@ -707,15 +791,15 @@ def process_athlete(a: Dict[str, Any], ev_name: str, ev_gender: str, ow_date: da
 
             "PoolEvent": pool_event,
 
-            "WA_SB_YTD_Time": wa_ev.get("sb_ytd_time"),
-            "WA_SB_YTD_Date": wa_ev.get("sb_ytd_date"),
-            "WA_SB_Upto_Meet": wa_ev.get("sb_ytd_meet"),
-            "WA_SB_Upto_Country": sb_cty,
+            "WA_SB_Time": wa_ev.get("sb_ytd_time"),
+            "WA_SB_Date": wa_ev.get("sb_ytd_date"),
+            "WA_SB_Meet": wa_ev.get("sb_ytd_meet"),
+            "WA_SB_Country": sb_country,
 
-            "WA_PB_Upto_Time": wa_ev.get("pb_upto_time"),
-            "WA_PB_Upto_Date": wa_ev.get("pb_upto_date"),
-            "WA_PB_Upto_Meet": wa_ev.get("pb_upto_meet"),
-            "WA_PB_Upto_Country": pb_cty,
+            "WA_PB_Time": wa_ev.get("pb_upto_time"),
+            "WA_PB_Date": wa_ev.get("pb_upto_date"),
+            "WA_PB_Meet": wa_ev.get("pb_upto_meet"),
+            "WA_PB_Country": pb_country,
         })
 
     return ev_gender, out_rows
@@ -799,7 +883,7 @@ def analyze_race(
                     ex.submit(
                         process_athlete,
                         a, ev_name, ev_gender, ow_date,
-                        comp_name, ow_country_code, ow_comp_country
+                        comp_name, ow_country_code
                     )
                 )
 
