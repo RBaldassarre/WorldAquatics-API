@@ -1,4 +1,4 @@
-# API_WorldAquatics_OW_Pool_Results_Integration_Beta (MULTI COMPETITIONS + PROGRESS + SINGLE CSV)
+# API_WorldAquatics_OW_Pool_Results_Integration.py
 from __future__ import annotations
 
 import os
@@ -10,7 +10,7 @@ import glob
 import shutil
 import logging
 import threading
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -48,6 +48,17 @@ HTTP_BACKOFF = 0.6
 SLEEP_BETWEEN_ATHLETES = 0.0
 SLEEP_BETWEEN_REQUESTS = 0.0
 
+# Season Best windows (lookback from OW cutoff date)
+# You can change these day values (approx months) as you like.
+SB_WINDOWS_DAYS = {
+    "2M": 61,
+    "4M": 122,
+    "6M": 183,
+    "8M": 244,
+}
+# Which SB window should populate the legacy WA_SB_* columns below
+SB_PRIMARY_LABEL = "6M"
+
 # Pool events
 POOL_EVENTS = ["400 Free", "800 Free", "1500 Free"]
 
@@ -55,6 +66,11 @@ POOL_EVENTS = ["400 Free", "800 Free", "1500 Free"]
 # PATHS
 # =======================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Output folder
+OUTPUT_DIR = os.path.join(BASE_DIR, "output_ow_pool_results_integration")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 CACHE_POOL_DIR = os.path.join(BASE_DIR, "cache_wa_pool_rows")
 CACHE_PROFILE_DIR = os.path.join(BASE_DIR, "cache_wa_profile")
 os.makedirs(CACHE_POOL_DIR, exist_ok=True)
@@ -436,6 +452,7 @@ def get_meet_country_code(meet_id: Optional[str]) -> Optional[str]:
 
 def wa_compute_pool_bests(rows: List[Dict[str, Any]], ow_date: date) -> Dict[str, Dict[str, Optional[str]]]:
     out: Dict[str, Dict[str, Optional[str]]] = {e: {} for e in POOL_EVENTS}
+    cutoff_date = ow_date + timedelta(days=20)
 
     for ev in POOL_EVENTS:
         ev_rows: List[Dict[str, Any]] = []
@@ -446,7 +463,7 @@ def wa_compute_pool_bests(rows: List[Dict[str, Any]], ow_date: date) -> Dict[str
                 continue
 
             d = _to_date(r.get("date"))
-            if not d or d > ow_date:
+            if not d or d > cutoff_date:
                 continue
 
             rr = dict(r)
@@ -456,7 +473,7 @@ def wa_compute_pool_bests(rows: List[Dict[str, Any]], ow_date: date) -> Dict[str
         if not ev_rows:
             continue
 
-        best_pb = min(ev_rows, key=lambda x: x["seconds"])
+        best_pb = min(ev_rows, key=lambda x: x["seconds"])  # all dates up to OW+20 cutoff
         out[ev]["pb_upto_time"] = best_pb.get("time")
         out[ev]["pb_upto_date"] = best_pb["date"].isoformat() if best_pb.get("date") else None
         out[ev]["pb_upto_meet"] = best_pb.get("meet")
@@ -465,16 +482,36 @@ def wa_compute_pool_bests(rows: List[Dict[str, Any]], ow_date: date) -> Dict[str
             pb_cc = get_meet_country_code(best_pb.get("comp_id"))
         out[ev]["pb_upto_country"] = pb_cc
 
-        ev_ytd = [r for r in ev_rows if r.get("date") and r["date"].year == ow_date.year]
-        if ev_ytd:
-            best_ytd = min(ev_ytd, key=lambda x: x["seconds"])
-            out[ev]["sb_ytd_time"] = best_ytd.get("time")
-            out[ev]["sb_ytd_date"] = best_ytd["date"].isoformat() if best_ytd.get("date") else None
-            out[ev]["sb_ytd_meet"] = best_ytd.get("meet")
-            sb_cc = best_ytd.get("country")
+        # SB: multiple lookback windows from OW+20 cutoff
+        for label, days in SB_WINDOWS_DAYS.items():
+            try:
+                days_i = int(days)
+            except Exception:
+                continue
+            if days_i <= 0:
+                continue
+
+            start_date = cutoff_date - timedelta(days=days_i)
+            ev_sb = [r for r in ev_rows if r.get("date") and r["date"] >= start_date]
+            if not ev_sb:
+                continue
+
+            best_sb = min(ev_sb, key=lambda x: x["seconds"])
+            out[ev][f"sb_{label}_time"] = best_sb.get("time")
+            out[ev][f"sb_{label}_date"] = best_sb["date"].isoformat() if best_sb.get("date") else None
+            out[ev][f"sb_{label}_meet"] = best_sb.get("meet")
+
+            sb_cc = best_sb.get("country")
             if not sb_cc:
-                sb_cc = get_meet_country_code(best_ytd.get("comp_id"))
-            out[ev]["sb_ytd_country"] = sb_cc
+                sb_cc = get_meet_country_code(best_sb.get("comp_id"))
+            out[ev][f"sb_{label}_country"] = sb_cc
+
+        # Keep a primary SB window for backward-compatible columns
+        primary = SB_PRIMARY_LABEL
+        out[ev]["sb_window_time"] = out[ev].get(f"sb_{primary}_time")
+        out[ev]["sb_window_date"] = out[ev].get(f"sb_{primary}_date")
+        out[ev]["sb_window_meet"] = out[ev].get(f"sb_{primary}_meet")
+        out[ev]["sb_window_country"] = out[ev].get(f"sb_{primary}_country")
 
     return out
 
@@ -761,12 +798,12 @@ def process_athlete(a: Dict[str, Any], ev_name: str, ev_gender: str, ow_date: da
         wa_ev = wa_pool.get(pool_event, {}) if isinstance(wa_pool, dict) else {}
 
         # Pool meet country only (do not fallback to OW competition country)
-        sb_country = wa_ev.get("sb_ytd_country")
+        sb_country = wa_ev.get("sb_window_country")
         pb_country = wa_ev.get("pb_upto_country")
 
         # Fallback: try to infer a 3-letter country code from the meet title if API country is missing
         if not sb_country:
-            meet = wa_ev.get("sb_ytd_meet")
+            meet = wa_ev.get("sb_window_meet")
             if meet:
                 m = re.search(r"\b[A-Z]{3}\b", str(meet).upper())
                 sb_country = m.group(0) if m else None
@@ -791,10 +828,31 @@ def process_athlete(a: Dict[str, Any], ev_name: str, ev_gender: str, ow_date: da
 
             "PoolEvent": pool_event,
 
-            "WA_SB_Time": wa_ev.get("sb_ytd_time"),
-            "WA_SB_Date": wa_ev.get("sb_ytd_date"),
-            "WA_SB_Meet": wa_ev.get("sb_ytd_meet"),
+            "WA_SB_Time": wa_ev.get("sb_window_time"),
+            "WA_SB_Date": wa_ev.get("sb_window_date"),
+            "WA_SB_Meet": wa_ev.get("sb_window_meet"),
             "WA_SB_Country": sb_country,
+
+            # Extra SB windows
+            "WA_SB_2M_Time": wa_ev.get("sb_2M_time"),
+            "WA_SB_2M_Date": wa_ev.get("sb_2M_date"),
+            "WA_SB_2M_Meet": wa_ev.get("sb_2M_meet"),
+            "WA_SB_2M_Country": wa_ev.get("sb_2M_country"),
+
+            "WA_SB_4M_Time": wa_ev.get("sb_4M_time"),
+            "WA_SB_4M_Date": wa_ev.get("sb_4M_date"),
+            "WA_SB_4M_Meet": wa_ev.get("sb_4M_meet"),
+            "WA_SB_4M_Country": wa_ev.get("sb_4M_country"),
+
+            "WA_SB_6M_Time": wa_ev.get("sb_6M_time"),
+            "WA_SB_6M_Date": wa_ev.get("sb_6M_date"),
+            "WA_SB_6M_Meet": wa_ev.get("sb_6M_meet"),
+            "WA_SB_6M_Country": wa_ev.get("sb_6M_country"),
+
+            "WA_SB_8M_Time": wa_ev.get("sb_8M_time"),
+            "WA_SB_8M_Date": wa_ev.get("sb_8M_date"),
+            "WA_SB_8M_Meet": wa_ev.get("sb_8M_meet"),
+            "WA_SB_8M_Country": wa_ev.get("sb_8M_country"),
 
             "WA_PB_Time": wa_ev.get("pb_upto_time"),
             "WA_PB_Date": wa_ev.get("pb_upto_date"),
@@ -933,12 +991,12 @@ def main() -> None:
 
     df_all = pd.DataFrame(rows_all)
 
-    out_csv = os.path.join(BASE_DIR, f"ow_pool_join_{input_stem}.csv")
+    out_csv = os.path.join(OUTPUT_DIR, f"ow_pool_join_{input_stem}.csv")
     save_csv(df_all, out_csv)
     lg.info("Saved: %s", out_csv)
 
     if WRITE_XLSX:
-        out_xlsx = os.path.join(BASE_DIR, f"ow_pool_join_{input_stem}.xlsx")
+        out_xlsx = os.path.join(OUTPUT_DIR, f"ow_pool_join_{input_stem}.xlsx")
         df_all.to_excel(out_xlsx, index=False)
         lg.info("Saved: %s", out_xlsx)
 
