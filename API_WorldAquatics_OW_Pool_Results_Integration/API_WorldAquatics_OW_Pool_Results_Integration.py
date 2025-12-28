@@ -36,10 +36,10 @@ CACHE_TTL_SECONDS: Optional[int] = 30 * 24 * 3600  # None -> never refresh
 CLEANUP_CACHE_AT_END = True
 
 # Debug
-LIMIT_ATHLETES = 10  # None or 0 -> no limit
+LIMIT_ATHLETES = 0  # None or 0 -> no limit
 
 # Concurrency
-MAX_WORKERS = 8
+MAX_WORKERS = 8 
 REQUEST_TIMEOUT = 30
 HTTP_RETRIES = 3
 HTTP_BACKOFF = 0.6

@@ -146,6 +146,62 @@ Configurable option inside the script:
 competition_id = "4725" # e.g. World Aquatics Championships - Singapore 2025
 ```
 
+### API_WorldAquatics_OW_Pool_Results_Integration.py
+
+Integrate **Open Water 10km results** with **Pool (50m LCM) best performances** (400/800/1500 Free) from World Aquatics endpoints, for the same athletes.
+
+**Input (automatic)**
+The script looks in the current folder for an Excel file named:
+
+* competitions_*.xlsx
+
+The file must contain a column named **id** (or the **first column**) with the list of **competition_id** values to analyze **in sequence**.
+If no **competitions_*.xlsx** file is found, the script stops and prints an English message.
+
+**Output**
+Results are saved in:
+
+* output_ow_pool_results_integration/
+
+The script generates **one single CSV** named:
+
+* ow_pool_join_<input_excel_filename>.csv
+
+(Optional) You can also export an Excel file by enabling **WRITE_XLSX = True**.
+
+
+**PB / SB logic**
+The script computes pool bests using a cutoff date based on the OW competition:
+
+* **PB (Personal Best)**: best performance considering all pool results up to **OW_date + 20 days**
+* **SB (Season Best)**: best performance in multiple configurable lookback windows from **OW_date + 20 days** (e.g., 2M / 4M / 6M / 8M)
+
+You can configure SB windows here:
+
+```python
+SB_WINDOWS_DAYS = {"2M": 61, "4M": 122, "6M": 183, "8M": 244}
+SB_PRIMARY_LABEL = "6M"
+```
+
+
+**Useful options**
+
+* Debug: analyze only the first N athletes per OW event:
+
+  ```python
+  LIMIT_ATHLETES = 10  # None or 0 -> no limit
+  ```
+* Delete cache folders after the script finishes:
+
+  ```python
+  CLEANUP_CACHE_AT_END = True
+  ```
+* Speed: controlled parallel requests:
+
+  ```pyt
+  MAX_WORKERS = 8
+  ```
+
 ## License
 
 This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License.
