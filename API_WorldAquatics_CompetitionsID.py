@@ -10,7 +10,7 @@ def years_input(args):
     arg = " ".join(args).lower().strip()
 
     if not arg:
-        return list(range(2000, 2026))  # default 2000-2025
+        return list(range(2010, 2026))  # default 2000-2025
 
     if "to" in arg:
         start, end = arg.split("to")
@@ -129,7 +129,7 @@ def main():
         date_to = f"{year + 1}-01-01T00:00:00+00:00"
         page = 0
 
-        print(f"\n🔎 Analyzing competitions for {year}...")
+        print(f"🔎 Analyzing competitions for {year}...")
 
         while True:
             url = "https://api.worldaquatics.com/fina/competitions"

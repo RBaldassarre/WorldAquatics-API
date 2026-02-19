@@ -120,8 +120,10 @@ df = df.groupby(["Athlete", "DOB", "Gender", "Country"], as_index=False).agg({
 df = df.sort_values(by="Country")
 
 suffix = "-".join(disc_list) if disc_list and any(disc_list) else "ALL"
-if fetch: suffix += "_both"
-if gender: suffix += f"_{gender}"
+if fetch:
+    suffix += "_both"
+if gender:
+    suffix += f"_{gender}"
 if cty_input:
     suffix += "_" + "-".join(cty_list)
 
