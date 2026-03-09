@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 
 # === Settings ===
-comp_ids = ["1", "2"]  # multiple competitions
+comp_id = "4725" #Singapore 2025
 disc_input = ["SW", "OW"]
 fetch = True  # True = intersection (AND), False = union (OR)
 gender = ""   # "M", "F", or "" for all
@@ -15,6 +15,7 @@ cty_input = ""  # e.g. "ITA", ["ITA", "USA"], or "" for all
 target_races = []
 
 # === API setup ===
+url = f"https://api.worldaquatics.com/fina/competitions/{comp_id}/athletes"
 headers = {
     "User-Agent": "Mozilla/5.0",
     "Accept": "application/json",
@@ -36,28 +37,20 @@ cty_list = normalize_input(cty_input)
 
 def fetch_data(disc, cty):
     print(f"📡 Downloading | discipline: {disc or 'ALL'} | gender: {gender or 'ALL'} | country: {cty or 'ALL'}")
-
     params = {
         "discipline": disc,
         "gender": gender,
         "countryId": cty
     }
+    res = requests.get(url, headers=headers, params=params)
+    res.raise_for_status()
+    return res.json()
 
-    try:
-        res = requests.get(url, headers=headers, params=params)
-        res.raise_for_status()
-        return res.json()
-
-    except requests.exceptions.HTTPError:
-        print(f"⚠️ competition not found: {url}")
-        return []
-
-def parse_athletes(data, filter_ids=None, ow_results=None, sw_results=None):
+def parse_athletes(data, filter_ids=None):
     rows = []
     for c in data:
         c_name = c.get("CountryName", "")
         for a in c.get("Participations", []):
-
             pid = a.get("PersonId")
             if filter_ids and pid not in filter_ids:
                 continue
@@ -79,59 +72,54 @@ def parse_athletes(data, filter_ids=None, ow_results=None, sw_results=None):
                 continue
 
             rows.append({
+                "CompetitionId": comp_id,
                 "Country": c_name,
                 "Athlete": full_name,
                 "Gender": g_str,
                 "DOB": dob,
-                "Discipline": d_str,
-                "OW_10km_place": ow_results.get(pid, "") if ow_results else "",
-                "SW_result": sw_results.get(pid, "") if sw_results else ""
+                "Discipline": d_str
             })
     return rows
 
 # === Main Logic ===
-all_rows = []
-for comp_id in comp_ids:
+if fetch:
+    # Fetch each discipline separately
+    data_dict = {}
+    id_sets = []
+    for disc in disc_list:
+        data = []
+        for cty in cty_list:
+            data.extend(fetch_data(disc, cty))
+        data_dict[disc] = data
+        ids = {a["PersonId"] for c in data for a in c.get("Participations", [])}
+        id_sets.append(ids)
+    
+    # Intersect all sets
+    common_ids = set.intersection(*id_sets)
+    print(f"📊 Athletes in ALL disciplines ({'-'.join(disc_list)}): {len(common_ids)}")
 
-    url = f"https://api.worldaquatics.com/fina/competitions/{comp_id}/athletes"
-
-    if fetch:
-
-        data_dict = {}
-        id_sets = []
-
-        for disc in disc_list:
-            data = []
-            for cty in cty_list:
-                data.extend(fetch_data(disc, cty))
-            data_dict[disc] = data
-
-            ids = {a["PersonId"] for c in data for a in c.get("Participations", [])}
-            id_sets.append(ids)
-
-        common_ids = set.intersection(*id_sets)
-
-        for disc in disc_list:
-            all_rows.extend(parse_athletes(data))
-
-    else:
-
-        for disc in disc_list:
-            for cty in cty_list:
-                data = fetch_data(disc, cty)
-                all_rows.extend(parse_athletes(data))
+    # Parse all data with filter
+    rows = []
+    for disc in disc_list:
+        rows.extend(parse_athletes(data_dict[disc], filter_ids=common_ids))
+else:
+    # Union of all data
+    all_data = []
+    for disc in disc_list:
+        for cty in cty_list:
+            all_data.extend(fetch_data(disc, cty))
+    rows = parse_athletes(all_data)
 
 # === Export ===
-df = pd.DataFrame(all_rows)
+df = pd.DataFrame(rows)
 # Group by athlete and merge disciplines
-df = df.groupby(["Athlete", "DOB", "Gender", "Country"], as_index=False).agg({
-    "Discipline": " / ".join,
-    "OW_10km_place": "first",
-    "SW_result": "first"
+df = df.groupby(["CompetitionId","Gender", "Athlete", "DOB", "Country"], as_index=False).agg({
+    "Discipline": " / ".join
 })
 
-# Sort by Country
-df = df.sort_values(by="Country")
+# sort 
+df = df.sort_values(by=["CompetitionId","Gender","Country","Athlete"])
+
 
 suffix = "-".join(disc_list) if disc_list and any(disc_list) else "ALL"
 if fetch:
