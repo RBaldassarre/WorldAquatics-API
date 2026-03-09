@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 
 # === Settings ===
-comp_id = "4725" #Singapore 2025
+comp_ids = ["4725", "2943","1"] # List of competition IDs to fetch
 disc_input = ["SW", "OW"]
 fetch = True  # True = intersection (AND), False = union (OR)
 gender = ""   # "M", "F", or "" for all
@@ -15,7 +15,6 @@ cty_input = ""  # e.g. "ITA", ["ITA", "USA"], or "" for all
 target_races = []
 
 # === API setup ===
-url = f"https://api.worldaquatics.com/fina/competitions/{comp_id}/athletes"
 headers = {
     "User-Agent": "Mozilla/5.0",
     "Accept": "application/json",
@@ -81,56 +80,60 @@ def parse_athletes(data, filter_ids=None):
             })
     return rows
 
-# === Main Logic ===
-if fetch:
-    # Fetch each discipline separately
-    data_dict = {}
-    id_sets = []
-    for disc in disc_list:
-        data = []
-        for cty in cty_list:
-            data.extend(fetch_data(disc, cty))
-        data_dict[disc] = data
-        ids = {a["PersonId"] for c in data for a in c.get("Participations", [])}
-        id_sets.append(ids)
-    
-    # Intersect all sets
-    common_ids = set.intersection(*id_sets)
-    print(f"📊 Athletes in ALL disciplines ({'-'.join(disc_list)}): {len(common_ids)}")
+# ========== Main ==========
+all_dfs = []
+for comp_id in comp_ids:
 
-    # Parse all data with filter
-    rows = []
-    for disc in disc_list:
-        rows.extend(parse_athletes(data_dict[disc], filter_ids=common_ids))
-else:
-    # Union of all data
-    all_data = []
-    for disc in disc_list:
-        for cty in cty_list:
-            all_data.extend(fetch_data(disc, cty))
-    rows = parse_athletes(all_data)
+    url = f"https://api.worldaquatics.com/fina/competitions/{comp_id}/athletes"
+
+    # === Main Logic ===
+    if fetch:
+        data_dict = {}
+        id_sets = []
+
+        for disc in disc_list:
+            data = []
+            for cty in cty_list:
+                data.extend(fetch_data(disc, cty))
+            data_dict[disc] = data
+
+            ids = {a["PersonId"] for c in data for a in c.get("Participations", [])}
+            id_sets.append(ids)
+
+        common_ids = set.intersection(*id_sets)
+
+        rows = []
+        for disc in disc_list:
+            rows.extend(parse_athletes(data_dict[disc], filter_ids=common_ids))
+
+    else:
+        all_data = []
+        for disc in disc_list:
+            for cty in cty_list:
+                all_data.extend(fetch_data(disc, cty))
+
+        rows = parse_athletes(all_data)
+
+    df = pd.DataFrame(rows)
+
+    df = df.groupby(
+        ["CompetitionId","Gender","Athlete","DOB","Country"],
+        as_index=False
+    ).agg({"Discipline": " / ".join})
+
+    df = df.sort_values(by=["CompetitionId","Gender","Country","Athlete"])
+
+    # save dataframe in list
+    all_dfs.append(df)
+        
 
 # === Export ===
-df = pd.DataFrame(rows)
-# Group by athlete and merge disciplines
-df = df.groupby(["CompetitionId","Gender", "Athlete", "DOB", "Country"], as_index=False).agg({
-    "Discipline": " / ".join
-})
-
-# sort 
-df = df.sort_values(by=["CompetitionId","Gender","Country","Athlete"])
-
-
+final_df = pd.concat(all_dfs, ignore_index=True)
 suffix = "-".join(disc_list) if disc_list and any(disc_list) else "ALL"
 if fetch:
     suffix += "_both"
-if gender:
-    suffix += f"_{gender}"
-if cty_input:
-    suffix += "_" + "-".join(cty_list)
-
-out_file = os.path.join(out_dir, f"athletes_{suffix}.xlsx")
-df.to_excel(out_file, index=False, engine="openpyxl")
-print(f"✅ Saved {len(df)} athletes to: {out_file}")
-
+comp_str = "-".join(comp_ids)
+out_file = os.path.join(out_dir, f"athletes_{comp_str}_{suffix}.xlsx")
+final_df.to_excel(out_file, index=False, engine="openpyxl")
+print(f"✅ Saved {len(final_df)} athletes to: {out_file}")
 
