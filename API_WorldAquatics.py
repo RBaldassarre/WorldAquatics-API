@@ -45,7 +45,7 @@ def fetch_data(disc, cty):
     res.raise_for_status()
     return res.json()
 
-def parse_athletes(data, filter_ids=None):
+def parse_athletes(data, filter_ids=None, ow_rank=None):
     rows = []
     for c in data:
         c_name = c.get("CountryName", "")
@@ -76,56 +76,103 @@ def parse_athletes(data, filter_ids=None):
                 "Athlete": full_name,
                 "Gender": g_str,
                 "DOB": dob,
-                "Discipline": d_str
+                "Discipline": d_str,
+                "10km_Rk": ow_rank.get(pid, "") if ow_rank else ""
             })
     return rows
+
+def get_10km_ranking(comp_id):
+
+    events_url = f"https://api.worldaquatics.com/fina/competitions/{comp_id}/events"
+    res = requests.get(events_url, headers=headers)
+    res.raise_for_status()
+    events_data = res.json()
+
+    event_ids = []
+
+    # search 10km OW events
+    for sport in events_data.get("Sports", []):
+        if sport.get("Code") == "OW":
+            for d in sport.get("DisciplineList", []):
+                name = d.get("DisciplineName", "").lower()
+                if "10km" in name:
+                    event_ids.append(d.get("Id"))
+
+    ranking = {}
+
+    for event_id in event_ids:
+
+        event_url = f"https://api.worldaquatics.com/fina/events/{event_id}"
+        res_event = requests.get(event_url, headers=headers)
+        res_event.raise_for_status()
+        event_data = res_event.json()
+
+        results = event_data["Heats"][0]["Results"]
+
+        for athlete in results:
+            pid = athlete.get("PersonId")
+            rank = athlete.get("Rank")
+
+            if pid:
+                ranking[pid] = rank
+
+    return ranking
 
 # ========== Main ==========
 all_dfs = []
 for comp_id in comp_ids:
+    try:
+        print(f"\n🏊 Processing competition {comp_id}")
+        url = f"https://api.worldaquatics.com/fina/competitions/{comp_id}/athletes"
 
-    url = f"https://api.worldaquatics.com/fina/competitions/{comp_id}/athletes"
+        ow_rank = get_10km_ranking(comp_id)
 
-    # === Main Logic ===
-    if fetch:
-        data_dict = {}
-        id_sets = []
+        # === Main Logic ===
+        if fetch:
+            data_dict = {}
+            id_sets = []
 
-        for disc in disc_list:
-            data = []
-            for cty in cty_list:
-                data.extend(fetch_data(disc, cty))
-            data_dict[disc] = data
+            for disc in disc_list:
+                data = []
+                for cty in cty_list:
+                    data.extend(fetch_data(disc, cty))
+                data_dict[disc] = data
 
-            ids = {a["PersonId"] for c in data for a in c.get("Participations", [])}
-            id_sets.append(ids)
+                ids = {a["PersonId"] for c in data for a in c.get("Participations", [])}
+                id_sets.append(ids)
 
-        common_ids = set.intersection(*id_sets)
+            common_ids = set.intersection(*id_sets)
 
-        rows = []
-        for disc in disc_list:
-            rows.extend(parse_athletes(data_dict[disc], filter_ids=common_ids))
+            rows = []
+            for disc in disc_list:
+                rows.extend(parse_athletes(data_dict[disc], filter_ids=common_ids, ow_rank=ow_rank))
 
-    else:
-        all_data = []
-        for disc in disc_list:
-            for cty in cty_list:
-                all_data.extend(fetch_data(disc, cty))
+        else:
+            all_data = []
+            for disc in disc_list:
+                for cty in cty_list:
+                    all_data.extend(fetch_data(disc, cty))
 
-        rows = parse_athletes(all_data)
+            rows = parse_athletes(all_data, ow_rank=ow_rank)
 
-    df = pd.DataFrame(rows)
+        df = pd.DataFrame(rows)
 
-    df = df.groupby(
+        df = df.groupby(
         ["CompetitionId","Gender","Athlete","DOB","Country"],
         as_index=False
-    ).agg({"Discipline": " / ".join})
+        ).agg({
+            "Discipline": " / ".join,
+            "10km_Rk": lambda x: next((v for v in x if v != ""), "")
+        })
 
-    df = df.sort_values(by=["CompetitionId","Gender","Country","Athlete"])
+        df = df.sort_values(by=["CompetitionId","Gender","Country","Athlete"])
 
-    # save dataframe in list
-    all_dfs.append(df)
+        # save dataframe in list
+        all_dfs.append(df)
         
+    except Exception as e:
+        print(f"❌ Skipping competition {comp_id} → {e}")
+        continue
 
 # === Export ===
 final_df = pd.concat(all_dfs, ignore_index=True)
