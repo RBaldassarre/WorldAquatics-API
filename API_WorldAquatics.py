@@ -48,7 +48,7 @@ def fetch_data(disc, cty):
         res.raise_for_status()
         return res.json()
 
-    except requests.exceptions.HTTPError as e:
+    except requests.exceptions.HTTPError:
         print(f"⚠️ competition not found: {url}")
         return []
 
