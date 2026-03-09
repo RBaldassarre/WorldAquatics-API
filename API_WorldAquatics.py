@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 
 # === Settings ===
-comp_ids = ["4725", "2943","1"] # List of competition IDs to fetch
+comp_ids = ["468", "416", "312", "262", "213", "95", "5", "2902", "1", "2943", "4725"] # List of competition IDs to fetch
 disc_input = ["SW", "OW"]
 fetch = True  # True = intersection (AND), False = union (OR)
 gender = ""   # "M", "F", or "" for all
@@ -115,37 +115,29 @@ def get_sw_results(comp_id):
 
                 heats = event_data.get("Heats", [])
 
-                final_heat = None
-
-                # search final
                 for h in heats:
-                    round_name = str(h.get("Round", "")).lower()
-                    if "final" in round_name:
-                        final_heat = h
-                        break
 
-                # fallback → timed final
-                if not final_heat and heats:
-                    final_heat = heats[-1]
-
-                if not final_heat:
-                    continue
-
-                heat_results = final_heat.get("Results", [])
-
-                for athlete in heat_results:
-
-                    pid = athlete.get("PersonId")
-                    rank = athlete.get("FinalRank") or athlete.get("Rank")
-
-                    if not pid:
+                    phase = str(h.get("PhaseName", "")).upper()
+                    if phase == "SUMMARY":
                         continue
+                    # print(f"   Processing SW event: {event_name} | phase: {phase}")
+                    heat_results = h.get("Results", [])
 
-                    if pid not in results_dict:
-                        results_dict[pid] = {}
+                    for athlete in heat_results:
 
-                    results_dict[pid][f"SW_{event_name}_Rank"] = rank
-                    results_dict[pid][f"SW_{event_name}_Round"] = final_heat.get("Round")
+                        pid = athlete.get("PersonId")
+                        rank = athlete.get("FinalRank") or athlete.get("Rank")
+
+                        if not pid:
+                            continue
+
+                        if pid not in results_dict:
+                            results_dict[pid] = {}
+
+                        col_name = f"{event_name}_{phase}_Rk"
+
+                        if col_name not in results_dict[pid]:
+                            results_dict[pid][col_name] = rank
 
             except Exception as e:
 
