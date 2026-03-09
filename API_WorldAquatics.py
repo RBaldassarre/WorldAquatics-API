@@ -14,6 +14,10 @@ cty_input = ""  # e.g. "ITA", ["ITA", "USA"], or "" for all
 # === Optional discipline filter ===
 target_races = []
 
+# === Ramking Results ===
+SW_RESULTS_ENABLED = True  # Set to False to skip fetching SW event results (faster)
+OW_RESULTS_ENABLED = True  # Set to False to skip fetching 10km OW rankings (faster)
+
 # === API setup ===
 headers = {
     "User-Agent": "Mozilla/5.0",
@@ -44,42 +48,6 @@ def fetch_data(disc, cty):
     res = requests.get(url, headers=headers, params=params)
     res.raise_for_status()
     return res.json()
-
-def parse_athletes(data, filter_ids=None, ow_rank=None):
-    rows = []
-    for c in data:
-        c_name = c.get("CountryName", "")
-        for a in c.get("Participations", []):
-            pid = a.get("PersonId")
-            if filter_ids and pid not in filter_ids:
-                continue
-
-            fn = a.get("PreferredFirstName", "")
-            ln = a.get("PreferredLastName", "")
-            full_name = f"{fn} {ln}".strip()
-
-            g_raw = a.get("Gender")
-            g_str = "M" if g_raw == 0 else "F" if g_raw == 1 else ""
-
-            dob_raw = a.get("DOB")
-            dob = dob_raw[:10] if dob_raw else ""
-
-            d_list = [d.get("DisciplineName", "") for d in a.get("Disciplines", [])]
-            d_str = " / ".join(d_list)
-
-            if target_races and not all(r in d_list for r in target_races):
-                continue
-
-            rows.append({
-                "CompetitionId": comp_id,
-                "Country": c_name,
-                "Athlete": full_name,
-                "Gender": g_str,
-                "DOB": dob,
-                "Discipline": d_str,
-                "10km_Rk": ow_rank.get(pid, "") if ow_rank else ""
-            })
-    return rows
 
 def get_10km_ranking(comp_id):
 
@@ -118,6 +86,122 @@ def get_10km_ranking(comp_id):
 
     return ranking
 
+def get_sw_results(comp_id):
+
+    events_url = f"https://api.worldaquatics.com/fina/competitions/{comp_id}/events"
+    res = requests.get(events_url, headers=headers)
+    res.raise_for_status()
+    events_data = res.json()
+
+    results_dict = {}
+
+    for sport in events_data.get("Sports", []):
+
+        if sport.get("Code") != "SW":
+            continue
+
+        for d in sport.get("DisciplineList", []):
+
+            event_id = d.get("Id")
+            event_name = d.get("DisciplineName").replace(" ", "_").replace("/", "_")
+
+            event_url = f"https://api.worldaquatics.com/fina/events/{event_id}"
+
+            try:
+
+                res_event = requests.get(event_url, headers=headers)
+                res_event.raise_for_status()
+                event_data = res_event.json()
+
+                heats = event_data.get("Heats", [])
+
+                final_heat = None
+
+                # search final
+                for h in heats:
+                    round_name = str(h.get("Round", "")).lower()
+                    if "final" in round_name:
+                        final_heat = h
+                        break
+
+                # fallback → timed final
+                if not final_heat and heats:
+                    final_heat = heats[-1]
+
+                if not final_heat:
+                    continue
+
+                heat_results = final_heat.get("Results", [])
+
+                for athlete in heat_results:
+
+                    pid = athlete.get("PersonId")
+                    rank = athlete.get("FinalRank") or athlete.get("Rank")
+
+                    if not pid:
+                        continue
+
+                    if pid not in results_dict:
+                        results_dict[pid] = {}
+
+                    results_dict[pid][f"SW_{event_name}_Rank"] = rank
+                    results_dict[pid][f"SW_{event_name}_Round"] = final_heat.get("Round")
+
+            except Exception as e:
+
+                print(f"⚠️ Skipping SW event {event_name} → {e}")
+                continue
+
+    return results_dict
+
+def parse_athletes(data, filter_ids=None, ow_rank=None, sw_results=None):
+
+    rows = []
+
+    for c in data:
+        c_name = c.get("CountryName", "")
+
+        for a in c.get("Participations", []):
+
+            pid = a.get("PersonId")
+
+            if filter_ids and pid not in filter_ids:
+                continue
+
+            fn = a.get("PreferredFirstName", "")
+            ln = a.get("PreferredLastName", "")
+            full_name = f"{fn} {ln}".strip()
+
+            g_raw = a.get("Gender")
+            g_str = "M" if g_raw == 0 else "F" if g_raw == 1 else ""
+
+            dob_raw = a.get("DOB")
+            dob = dob_raw[:10] if dob_raw else ""
+
+            d_list = [d.get("DisciplineName", "") for d in a.get("Disciplines", [])]
+            d_str = " / ".join(d_list)
+
+            if target_races and not all(r in d_list for r in target_races):
+                continue
+
+            row = {
+                "CompetitionId": comp_id,
+                "Country": c_name,
+                "Athlete": full_name,
+                "Gender": g_str,
+                "DOB": dob,
+                "Discipline": d_str,
+                "10km_Rk": ow_rank.get(pid, "") if ow_rank else ""
+            }
+
+            # add SW results
+            if sw_results and pid in sw_results:
+                row.update(sw_results[pid])
+
+            rows.append(row)
+
+    return rows
+
 # ========== Main ==========
 all_dfs = []
 for comp_id in comp_ids:
@@ -125,7 +209,19 @@ for comp_id in comp_ids:
         print(f"\n🏊 Processing competition {comp_id}")
         url = f"https://api.worldaquatics.com/fina/competitions/{comp_id}/athletes"
 
-        ow_rank = get_10km_ranking(comp_id)
+        ow_rank = {}
+        if OW_RESULTS_ENABLED:
+            try:
+                ow_rank = get_10km_ranking(comp_id)
+            except Exception:
+                pass
+
+        sw_results = {}
+        if SW_RESULTS_ENABLED:
+            try:
+                sw_results = get_sw_results(comp_id)
+            except Exception:
+                pass
 
         # === Main Logic ===
         if fetch:
@@ -145,7 +241,12 @@ for comp_id in comp_ids:
 
             rows = []
             for disc in disc_list:
-                rows.extend(parse_athletes(data_dict[disc], filter_ids=common_ids, ow_rank=ow_rank))
+                rows.extend(parse_athletes(
+                    data_dict[disc],
+                    filter_ids=common_ids,
+                    ow_rank=ow_rank,
+                    sw_results=sw_results
+                ))
 
         else:
             all_data = []
@@ -155,20 +256,26 @@ for comp_id in comp_ids:
 
             rows = parse_athletes(all_data, ow_rank=ow_rank)
 
+        if not rows:
+            continue
+
         df = pd.DataFrame(rows)
 
-        df = df.groupby(
-        ["CompetitionId","Gender","Athlete","DOB","Country"],
-        as_index=False
-        ).agg({
-            "Discipline": " / ".join,
-            "10km_Rk": lambda x: next((v for v in x if v != ""), "")
-        })
+        group_cols = ["CompetitionId", "Gender", "Athlete", "DOB", "Country"]
+        agg_dict = {}
 
-        df = df.sort_values(by=["CompetitionId","Gender","Country","Athlete"])
+        for col in df.columns:
+            if col == "Discipline":
+                agg_dict[col] = " / ".join
+            elif col == "10km_Rk":
+                agg_dict[col] = lambda x: next((v for v in x if v != ""), "")
+            elif col not in group_cols:
+                agg_dict[col] = "first"
 
-        # save dataframe in list
-        all_dfs.append(df)
+        df = df.groupby(group_cols, as_index=False).agg(agg_dict)
+        df = df.replace("", pd.NA)
+        df = df.dropna(axis=1, how="all") # remove empty columns
+        all_dfs.append(df) # save dataframe in list
         
     except Exception as e:
         print(f"❌ Skipping competition {comp_id} → {e}")
