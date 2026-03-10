@@ -177,7 +177,7 @@ def parse_athletes(data, filter_ids=None, ow_rank=None, sw_results=None):
                 continue
 
             row = {
-                "CompetitionId": comp_id,
+                "Competition_Id": comp_id,
                 "Country": c_name,
                 "Athlete": full_name,
                 "Gender": g_str,
@@ -253,7 +253,7 @@ for comp_id in comp_ids:
 
         df = pd.DataFrame(rows)
 
-        group_cols = ["CompetitionId", "Gender", "Athlete", "DOB", "Country"]
+        group_cols = ["Competition_Id", "Gender", "Athlete", "DOB", "Country"]
         agg_dict = {}
 
         for col in df.columns:
